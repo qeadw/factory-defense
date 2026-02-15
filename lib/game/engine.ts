@@ -17,6 +17,8 @@ import {
   ENEMY_DEFINITIONS,
   ResourceStack,
   Direction,
+  WaveConfig,
+  WaveModifier,
 } from './types';
 
 // ============================================================================
@@ -971,17 +973,17 @@ function completeWave(state: GameState): void {
   state.activeWave = null;
 }
 
-export function startWave(state: GameState, waveConfig: any, modifiers: string[]): void {
+export function startWave(state: GameState, waveConfig: WaveConfig, modifiers: WaveModifier[]): void {
   // Check if can afford
   for (const cost of waveConfig.baseCost) {
-    if ((state.resources[cost.type] || 0) < cost.amount) {
+    if ((state.resources[cost.type as ResourceType] || 0) < cost.amount) {
       return; // Can't afford
     }
   }
 
   // Deduct cost
   for (const cost of waveConfig.baseCost) {
-    state.resources[cost.type] -= cost.amount;
+    state.resources[cost.type as ResourceType] -= cost.amount;
   }
 
   // Calculate total enemies
@@ -997,7 +999,7 @@ export function startWave(state: GameState, waveConfig: any, modifiers: string[]
 
   state.activeWave = {
     config: waveConfig,
-    modifiers: modifiers as any,
+    modifiers: modifiers,
     enemiesRemaining: totalEnemies,
     totalEnemies,
     spawnTimer: 0,
