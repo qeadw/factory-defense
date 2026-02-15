@@ -114,6 +114,37 @@ export function render(
 // TILES
 // ============================================================================
 
+// Check if a tile position is within any power radius
+function isTilePowered(state: GameState, tileX: number, tileY: number): boolean {
+  const tileCenterX = (tileX + 0.5) * TILE_SIZE;
+  const tileCenterY = (tileY + 0.5) * TILE_SIZE;
+
+  for (const building of state.buildings.values()) {
+    if (building.type === 'coal_generator' || building.type === 'steam_generator' || building.type === 'fusion_reactor' || building.type === 'core') {
+      const centerX = (building.gridX + building.width / 2) * TILE_SIZE;
+      const centerY = (building.gridY + building.height / 2) * TILE_SIZE;
+
+      let radius: number;
+      if (building.type === 'core') {
+        radius = 6 * TILE_SIZE;
+      } else if (building.type === 'coal_generator') {
+        radius = 5 * TILE_SIZE;
+      } else if (building.type === 'steam_generator') {
+        radius = 8 * TILE_SIZE;
+      } else {
+        radius = 15 * TILE_SIZE;
+      }
+
+      const dx = tileCenterX - centerX;
+      const dy = tileCenterY - centerY;
+      if (dx * dx + dy * dy <= radius * radius) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function renderTiles(
   ctx: CanvasRenderingContext2D,
   state: GameState,
@@ -134,9 +165,16 @@ function renderTiles(
 
       const worldX = x * TILE_SIZE;
       const worldY = y * TILE_SIZE;
+      const isPowered = isTilePowered(state, x, y);
 
-      // Base tile color
-      ctx.fillStyle = getTileColor(tile.type);
+      // Base tile color - different for powered vs unpowered
+      if (isPowered) {
+        // Inside base - lighter, more industrial floor look
+        ctx.fillStyle = tile.buildable ? '#3a3a40' : getTileColor(tile.type);
+      } else {
+        // Outside base - darker, wilderness look
+        ctx.fillStyle = getTileColor(tile.type);
+      }
       ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
       // Industrial texture noise
@@ -144,22 +182,34 @@ function renderTiles(
       ctx.fillStyle = `rgba(0, 0, 0, ${0.05 + noise * 0.08})`;
       ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-      // Buildable area - subtle metal plate look
-      if (tile.buildable) {
-        ctx.fillStyle = COLORS.buildableArea;
+      // Powered area overlay - subtle warm tint
+      if (isPowered && tile.buildable) {
+        ctx.fillStyle = 'rgba(80, 60, 40, 0.08)';
         ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-        // Corner rivets
-        ctx.fillStyle = 'rgba(60, 60, 70, 0.4)';
+        // Metal floor plate pattern
+        ctx.strokeStyle = 'rgba(80, 80, 90, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(worldX + 4, worldY + TILE_SIZE / 2);
+        ctx.lineTo(worldX + TILE_SIZE - 4, worldY + TILE_SIZE / 2);
+        ctx.stroke();
+
+        // Corner rivets - more visible in powered area
+        ctx.fillStyle = 'rgba(90, 90, 100, 0.5)';
         const rivetSize = 2;
         ctx.fillRect(worldX + 2, worldY + 2, rivetSize, rivetSize);
         ctx.fillRect(worldX + TILE_SIZE - 4, worldY + 2, rivetSize, rivetSize);
         ctx.fillRect(worldX + 2, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
         ctx.fillRect(worldX + TILE_SIZE - 4, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
+      } else if (tile.buildable) {
+        // Unpowered buildable - darker wilderness
+        ctx.fillStyle = 'rgba(0, 10, 5, 0.15)';
+        ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
       }
 
       // Grid lines - industrial seams
-      ctx.strokeStyle = 'rgba(20, 20, 25, 0.8)';
+      ctx.strokeStyle = isPowered ? 'rgba(50, 50, 55, 0.9)' : 'rgba(20, 20, 25, 0.8)';
       ctx.lineWidth = 1;
       ctx.strokeRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
@@ -868,16 +918,48 @@ function renderBuildingPlacement(
   ctx.fillStyle = canPlace ? COLORS.validPlacement : COLORS.invalidPlacement;
   ctx.fillRect(x, y, w, h);
 
-  ctx.strokeStyle = canPlace ? '#00ff00' : '#ff0000';
+  ctx.strokeStyle = canPlace ? '#508050' : '#803030';
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, w, h);
 
   // Building label
-  ctx.fillStyle = 'white';
-  ctx.font = '10px monospace';
+  ctx.fillStyle = 'rgba(200, 200, 180, 0.9)';
+  ctx.font = 'bold 9px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(getBuildingLabel(state.selectedBuilding), x + w / 2, y + h / 2);
+  const label = getBuildingLabel(state.selectedBuilding);
+  if (label) {
+    ctx.fillText(label, x + w / 2, y + h / 2 - 6);
+  }
+
+  // Direction indicator arrow (for conveyors and directional buildings)
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2 + 4);
+
+  // Rotate based on placement direction
+  switch (state.placementDirection) {
+    case 'up': ctx.rotate(-Math.PI / 2); break;
+    case 'down': ctx.rotate(Math.PI / 2); break;
+    case 'left': ctx.rotate(Math.PI); break;
+    case 'right': break; // default facing right
+  }
+
+  // Draw arrow
+  ctx.fillStyle = canPlace ? '#70a060' : '#a05050';
+  ctx.beginPath();
+  ctx.moveTo(8, 0);
+  ctx.lineTo(-4, -5);
+  ctx.lineTo(-4, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  // Show rotation hint
+  ctx.fillStyle = 'rgba(150, 150, 140, 0.8)';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('[E] ROTATE', x + w / 2, y + h + 10);
 }
 
 // ============================================================================

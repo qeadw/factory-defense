@@ -99,6 +99,7 @@ export function createInitialState(): GameState {
     },
 
     selectedBuilding: null,
+    placementDirection: 'right',
     hoveredTile: null,
     showBuildMenu: false,
     showWaveMenu: false,
@@ -368,11 +369,23 @@ export function activateAbility(state: GameState, ability: string): void {
 
   switch (ability) {
     case 'dash':
-      const dashSpeed = 600;
-      const dashDuration = 0.15;
-      const angle = Math.atan2(player.velocity.y, player.velocity.x);
-      player.position.x += Math.cos(angle) * dashSpeed * dashDuration;
-      player.position.y += Math.sin(angle) * dashSpeed * dashDuration;
+      const dashDistance = 100;
+      // Dash in movement direction if moving, otherwise toward mouse
+      let dashAngle: number;
+      const velMag = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y);
+      if (velMag > 10) {
+        dashAngle = Math.atan2(player.velocity.y, player.velocity.x);
+      } else {
+        // Dash toward mouse cursor
+        dashAngle = Math.atan2(
+          state.input.mouseWorldY - player.position.y,
+          state.input.mouseWorldX - player.position.x
+        );
+      }
+      player.position.x += Math.cos(dashAngle) * dashDistance;
+      player.position.y += Math.sin(dashAngle) * dashDistance;
+      player.invincible = true;
+      player.invincibleTimer = 0.2; // Brief invincibility during dash
       abilityState.cooldownRemaining = 1;
       break;
     case 'shield':

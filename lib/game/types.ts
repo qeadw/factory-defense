@@ -415,6 +415,7 @@ export interface GameState {
 
   // UI state
   selectedBuilding: BuildingType | null;
+  placementDirection: Direction;
   hoveredTile: GridPosition | null;
   showBuildMenu: boolean;
   showWaveMenu: boolean;

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   GameState,
   BuildingType,
+  Direction,
   TILE_SIZE,
   BUILDING_DEFINITIONS,
 } from '@/lib/game/types';
@@ -81,6 +82,14 @@ export default function Game() {
       if (e.code === 'Digit2') activateAbility(state, 'overdrive');
       if (e.code === 'Digit3') activateAbility(state, 'emp');
       if (e.code === 'Digit4') activateAbility(state, 'turret_boost');
+
+      // Rotate placement direction (E key or mouse wheel when building selected)
+      if (e.code === 'KeyE' && state.selectedBuilding) {
+        const directions: Direction[] = ['right', 'down', 'left', 'up'];
+        const currentIdx = directions.indexOf(state.placementDirection);
+        state.placementDirection = directions[(currentIdx + 1) % 4];
+        forceUpdate({});
+      }
 
       // Building selection hotkeys (avoiding WASD movement keys)
       const buildingKeys: Record<string, BuildingType> = {
@@ -162,7 +171,7 @@ export default function Game() {
             state.selectedBuilding,
             state.hoveredTile.gridX,
             state.hoveredTile.gridY,
-            'up'
+            state.placementDirection
           );
           if (success) {
             forceUpdate({});
