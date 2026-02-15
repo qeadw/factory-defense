@@ -126,7 +126,7 @@ function isTilePowered(state: GameState, tileX: number, tileY: number): boolean 
 
       let radius: number;
       if (building.type === 'core') {
-        radius = 9 * TILE_SIZE; // 1.5x larger safe zone
+        radius = 36 * TILE_SIZE; // 4x larger safe zone
       } else if (building.type === 'coal_generator') {
         radius = 5 * TILE_SIZE;
       } else if (building.type === 'steam_generator') {

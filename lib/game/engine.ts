@@ -26,8 +26,8 @@ import {
 // ============================================================================
 
 export function createInitialState(): GameState {
-  const mapWidth = 64;
-  const mapHeight = 64;
+  const mapWidth = 128;
+  const mapHeight = 128;
   const tiles = generateMap(mapWidth, mapHeight);
 
   const state: GameState = {
@@ -118,7 +118,7 @@ function generateMap(width: number, height: number): Tile[][] {
   const tiles: Tile[][] = [];
   const centerX = Math.floor(width / 2);
   const centerY = Math.floor(height / 2);
-  const safeZoneRadius = 9; // Matches core power radius
+  const safeZoneRadius = 36; // 4x larger safe zone
 
   for (let y = 0; y < height; y++) {
     tiles[y] = [];
@@ -126,21 +126,21 @@ function generateMap(width: number, height: number): Tile[][] {
       const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
 
       let type: TileType = 'grass';
-      let buildable = distFromCenter <= 14; // Larger buildable area
+      let buildable = distFromCenter <= 50; // Larger buildable area for expanded safe zone
 
-      // Add resource deposits - only within 2 tiles of the safe zone edge
-      const oreMinDist = safeZoneRadius - 2; // 7 tiles from center
-      const oreMaxDist = safeZoneRadius;     // 9 tiles from center (edge of safe zone)
+      // Add resource deposits - in outer ring, at least 2 tiles from safe zone edge
+      const oreMinDist = safeZoneRadius + 2; // 2 tiles outside safe zone
+      const oreMaxDist = safeZoneRadius + 8; // outer ring
       if (distFromCenter >= oreMinDist && distFromCenter <= oreMaxDist) {
         const rand = Math.random();
-        if (rand < 0.06) type = 'iron_deposit';
-        else if (rand < 0.10) type = 'copper_deposit';
-        else if (rand < 0.14) type = 'coal_deposit';
-        else if (rand < 0.16) type = 'stone_deposit';
+        if (rand < 0.05) type = 'iron_deposit';
+        else if (rand < 0.09) type = 'copper_deposit';
+        else if (rand < 0.12) type = 'coal_deposit';
+        else if (rand < 0.14) type = 'stone_deposit';
       }
 
       // Water patches outside safe zone
-      if (Math.random() < 0.015 && distFromCenter > safeZoneRadius && distFromCenter <= 16) {
+      if (Math.random() < 0.015 && distFromCenter > safeZoneRadius && distFromCenter <= 55) {
         type = 'water';
       }
 
