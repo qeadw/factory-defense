@@ -82,14 +82,14 @@ export default function Game() {
       if (e.code === 'Digit3') activateAbility(state, 'emp');
       if (e.code === 'Digit4') activateAbility(state, 'turret_boost');
 
-      // Building selection (number keys for quick build)
+      // Building selection hotkeys (avoiding WASD movement keys)
       const buildingKeys: Record<string, BuildingType> = {
-        'KeyE': 'ore_extractor',
-        'KeyC': 'conveyor',
-        'KeyG': 'coal_generator',
-        'KeyT': 'turret_base',
-        'KeyX': 'wall',
-        'KeyS': 'storage',
+        'KeyR': 'ore_extractor',    // R - extRactor
+        'KeyF': 'conveyor',          // F - Flow
+        'KeyG': 'coal_generator',    // G - Generator
+        'KeyT': 'turret_base',       // T - Turret
+        'KeyB': 'wall',              // B - Barrier
+        'KeyH': 'storage',           // H - Hold/storage
       };
       if (buildingKeys[e.code] && state.unlockedBuildings.has(buildingKeys[e.code])) {
         state.selectedBuilding = buildingKeys[e.code];
@@ -101,11 +101,6 @@ export default function Game() {
         state.selectedBuilding = null;
         state.showBuildMenu = false;
         forceUpdate({});
-      }
-
-      // Start wave (W key when not building)
-      if (e.code === 'KeyW' && !state.input.keys.has('KeyA') && !state.input.keys.has('KeyS') && !state.input.keys.has('KeyD')) {
-        // Only if not currently moving
       }
 
       // Summon wave with V key
@@ -345,9 +340,9 @@ export default function Game() {
 
           <div style={{ marginTop: 15, color: '#666', fontSize: 10 }}>
             <div>Hotkeys:</div>
-            <div>E - Extractor, C - Conveyor</div>
+            <div>R - Extractor, F - Conveyor</div>
             <div>G - Generator, T - Turret</div>
-            <div>X - Wall, S - Storage</div>
+            <div>B - Wall, H - Storage</div>
           </div>
         </div>
       )}

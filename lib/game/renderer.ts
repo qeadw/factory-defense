@@ -899,13 +899,10 @@ function renderUI(
   // Wave info
   renderWaveInfo(ctx, state, canvasWidth);
 
-  // Build menu
-  if (state.showBuildMenu) {
-    renderBuildMenu(ctx, state, canvasWidth, canvasHeight);
+  // Controls hint (hidden when build menu is open - HTML overlay handles it)
+  if (!state.showBuildMenu) {
+    renderControlsHint(ctx, canvasWidth, canvasHeight);
   }
-
-  // Controls hint
-  renderControlsHint(ctx, canvasWidth, canvasHeight);
 }
 
 function renderPlayerHUD(
