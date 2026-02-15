@@ -449,7 +449,7 @@ export interface InputState {
 // CONSTANTS
 // ============================================================================
 
-export const TILE_SIZE = 32;
+export const TILE_SIZE = 22;
 export const TICKS_PER_SECOND = 60;
 
 export const BUILDING_DEFINITIONS: Record<BuildingType, {
