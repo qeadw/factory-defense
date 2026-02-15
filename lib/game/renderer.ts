@@ -9,53 +9,63 @@ import {
 } from './types';
 
 // ============================================================================
-// COLORS
+// INDUSTRIAL COLOR PALETTE
 // ============================================================================
 
 const COLORS = {
-  // Tiles
-  grass: '#4a7c3f',
-  dirt: '#8b7355',
-  stone_floor: '#888888',
-  water: '#4a90b8',
-  iron_deposit: '#8b6914',
-  copper_deposit: '#cd7f32',
-  coal_deposit: '#2a2a2a',
-  stone_deposit: '#696969',
-  void: '#1a1a2e',
+  // Tiles - Dark industrial ground
+  grass: '#2a3a28',
+  dirt: '#3d3428',
+  stone_floor: '#4a4a4a',
+  water: '#1a3040',
+  iron_deposit: '#5c4a2a',
+  copper_deposit: '#6b4423',
+  coal_deposit: '#1a1a1a',
+  stone_deposit: '#3a3a3a',
+  void: '#0a0a12',
 
-  // Buildings
-  core: '#ffd700',
-  extractor: '#a0522d',
-  production: '#708090',
-  logistics: '#4682b4',
-  defense: '#dc143c',
-  power: '#ff8c00',
-  utility: '#9370db',
-  wall: '#555555',
+  // Buildings - Metallic industrial
+  core: '#c4a000',
+  extractor: '#6b5030',
+  production: '#505860',
+  logistics: '#3a5060',
+  defense: '#8b2020',
+  power: '#b06000',
+  utility: '#504060',
+  wall: '#3a3a3a',
 
-  // Player
-  player: '#00ff00',
-  playerDead: '#666666',
+  // Player - Industrial mech
+  player: '#70a060',
+  playerDead: '#404040',
 
   // Enemies
-  hive: '#8b0000',
-  machines: '#4169e1',
-  void_faction: '#9400d3',
+  hive: '#6b1010',
+  machines: '#304080',
+  void_faction: '#5a1080',
 
   // Projectiles
-  playerProjectile: '#ffff00',
-  turretProjectile: '#ff6600',
-  enemyProjectile: '#ff0000',
+  playerProjectile: '#c0d000',
+  turretProjectile: '#d06000',
+  enemyProjectile: '#c02020',
 
   // UI
-  healthBar: '#00ff00',
-  healthBarBg: '#333333',
-  energyBar: '#00bfff',
-  powerRadius: 'rgba(255, 200, 0, 0.1)',
-  buildableArea: 'rgba(0, 255, 0, 0.05)',
-  invalidPlacement: 'rgba(255, 0, 0, 0.3)',
-  validPlacement: 'rgba(0, 255, 0, 0.3)',
+  healthBar: '#70a060',
+  healthBarBg: '#1a1a1a',
+  energyBar: '#4080a0',
+  powerRadius: 'rgba(180, 120, 40, 0.08)',
+  buildableArea: 'rgba(100, 140, 80, 0.03)',
+  invalidPlacement: 'rgba(180, 40, 40, 0.25)',
+  validPlacement: 'rgba(100, 140, 80, 0.25)',
+
+  // Industrial accents
+  rust: '#6b3020',
+  metal: '#606870',
+  metalDark: '#404850',
+  metalLight: '#808890',
+  grime: '#2a2820',
+  warning: '#c0a020',
+  steam: 'rgba(180, 180, 160, 0.3)',
+  sparks: '#d09030',
 };
 
 // ============================================================================
@@ -68,8 +78,8 @@ export function render(
   canvasWidth: number,
   canvasHeight: number
 ): void {
-  // Clear
-  ctx.fillStyle = '#1a1a2e';
+  // Clear with dark industrial background
+  ctx.fillStyle = '#0c0c10';
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
   // Save context and apply camera transform
@@ -129,22 +139,55 @@ function renderTiles(
       ctx.fillStyle = getTileColor(tile.type);
       ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-      // Buildable area indicator
+      // Industrial texture noise
+      const noise = ((x * 7 + y * 13) % 17) / 17;
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.05 + noise * 0.08})`;
+      ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
+
+      // Buildable area - subtle metal plate look
       if (tile.buildable) {
         ctx.fillStyle = COLORS.buildableArea;
         ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
+
+        // Corner rivets
+        ctx.fillStyle = 'rgba(60, 60, 70, 0.4)';
+        const rivetSize = 2;
+        ctx.fillRect(worldX + 2, worldY + 2, rivetSize, rivetSize);
+        ctx.fillRect(worldX + TILE_SIZE - 4, worldY + 2, rivetSize, rivetSize);
+        ctx.fillRect(worldX + 2, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
+        ctx.fillRect(worldX + TILE_SIZE - 4, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
       }
 
-      // Grid lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      // Grid lines - industrial seams
+      ctx.strokeStyle = 'rgba(20, 20, 25, 0.8)';
+      ctx.lineWidth = 1;
       ctx.strokeRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-      // Resource deposit indicator
+      // Resource deposit indicator - ore chunks
       if (tile.type.includes('deposit')) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.beginPath();
-        ctx.arc(worldX + TILE_SIZE / 2, worldY + TILE_SIZE / 2, TILE_SIZE / 4, 0, Math.PI * 2);
-        ctx.fill();
+        const depositColor = tile.type === 'iron_deposit' ? '#7a6040' :
+                            tile.type === 'copper_deposit' ? '#8b5535' :
+                            tile.type === 'coal_deposit' ? '#252525' : '#555555';
+
+        // Multiple ore chunks
+        for (let i = 0; i < 3; i++) {
+          const ox = worldX + 8 + ((i * 11 + x) % 16);
+          const oy = worldY + 8 + ((i * 7 + y) % 16);
+          const size = 4 + (i % 2) * 2;
+
+          ctx.fillStyle = depositColor;
+          ctx.beginPath();
+          ctx.moveTo(ox, oy - size/2);
+          ctx.lineTo(ox + size/2, oy);
+          ctx.lineTo(ox, oy + size/2);
+          ctx.lineTo(ox - size/2, oy);
+          ctx.closePath();
+          ctx.fill();
+
+          // Highlight
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.fillRect(ox - size/4, oy - size/2, size/2, size/4);
+        }
       }
     }
   }
@@ -196,45 +239,104 @@ function renderBuilding(ctx: CanvasRenderingContext2D, building: Building, state
   const w = building.width * TILE_SIZE;
   const h = building.height * TILE_SIZE;
 
-  // Building body
-  ctx.fillStyle = getBuildingColor(building.type);
+  // Building shadow
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.fillRect(x + 4, y + 4, w - 4, h - 4);
+
+  // Building body - dark base
+  ctx.fillStyle = COLORS.metalDark;
   ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
 
-  // Powered indicator
-  if (BUILDING_DEFINITIONS[building.type].powerRequired) {
-    const indicatorColor = building.powered ? '#00ff00' : '#ff0000';
-    ctx.fillStyle = indicatorColor;
+  // Building top layer with color
+  const buildingColor = getBuildingColor(building.type);
+  ctx.fillStyle = buildingColor;
+  ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+
+  // Industrial panel lines
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.lineWidth = 1;
+  if (w > TILE_SIZE) {
     ctx.beginPath();
-    ctx.arc(x + w - 6, y + 6, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(x + w/2, y + 4);
+    ctx.lineTo(x + w/2, y + h - 4);
+    ctx.stroke();
+  }
+  if (h > TILE_SIZE) {
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + h/2);
+    ctx.lineTo(x + w - 4, y + h/2);
+    ctx.stroke();
   }
 
-  // Building type indicator
-  ctx.fillStyle = 'white';
-  ctx.font = '10px monospace';
+  // Top highlight edge
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.fillRect(x + 3, y + 3, w - 6, 2);
+
+  // Bottom shadow edge
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+  ctx.fillRect(x + 3, y + h - 5, w - 6, 2);
+
+  // Corner bolts
+  ctx.fillStyle = COLORS.metalLight;
+  const boltSize = 3;
+  ctx.fillRect(x + 4, y + 4, boltSize, boltSize);
+  ctx.fillRect(x + w - 7, y + 4, boltSize, boltSize);
+  ctx.fillRect(x + 4, y + h - 7, boltSize, boltSize);
+  ctx.fillRect(x + w - 7, y + h - 7, boltSize, boltSize);
+
+  // Powered indicator - industrial light
+  if (BUILDING_DEFINITIONS[building.type].powerRequired) {
+    const powered = building.powered;
+    ctx.fillStyle = powered ? '#50a050' : '#802020';
+    ctx.fillRect(x + w - 10, y + 4, 6, 6);
+    ctx.strokeStyle = '#303030';
+    ctx.strokeRect(x + w - 10, y + 4, 6, 6);
+
+    // Glow when powered
+    if (powered) {
+      ctx.fillStyle = 'rgba(80, 160, 80, 0.3)';
+      ctx.beginPath();
+      ctx.arc(x + w - 7, y + 7, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Building type indicator - stencil style
+  ctx.fillStyle = 'rgba(200, 200, 180, 0.9)';
+  ctx.font = 'bold 9px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const label = getBuildingLabel(building.type);
-  ctx.fillText(label, x + w / 2, y + h / 2);
-
-  // Health bar (if damaged)
-  if (building.hp < building.maxHp) {
-    const healthPercent = building.hp / building.maxHp;
-    const barWidth = w - 4;
-    const barHeight = 4;
-    const barX = x + 2;
-    const barY = y + h - 6;
-
-    ctx.fillStyle = COLORS.healthBarBg;
-    ctx.fillRect(barX, barY, barWidth, barHeight);
-
-    ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
-    ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+  if (label) {
+    ctx.fillText(label, x + w / 2, y + h / 2);
   }
 
-  // Direction indicator for conveyors
+  // Health bar (if damaged) - industrial style
+  if (building.hp < building.maxHp) {
+    const healthPercent = building.hp / building.maxHp;
+    const barWidth = w - 8;
+    const barHeight = 4;
+    const barX = x + 4;
+    const barY = y + h - 8;
+
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+
+    ctx.fillStyle = healthPercent > 0.5 ? '#508050' : healthPercent > 0.25 ? '#a08030' : '#803030';
+    ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+    // Damage rust marks
+    if (healthPercent < 0.7) {
+      ctx.fillStyle = COLORS.rust;
+      const rustX = x + 6 + (building.id.charCodeAt(0) % 10);
+      const rustY = y + 6 + (building.id.charCodeAt(1) % 8);
+      ctx.fillRect(rustX, rustY, 4, 3);
+    }
+  }
+
+  // Direction indicator for conveyors - industrial arrows
   if (building.type === 'conveyor') {
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = COLORS.metalLight;
     ctx.save();
     ctx.translate(x + w / 2, y + h / 2);
     switch (building.direction) {
@@ -243,14 +345,24 @@ function renderBuilding(ctx: CanvasRenderingContext2D, building: Building, state
       case 'left': ctx.rotate(Math.PI); break;
       case 'right': break;
     }
+    // Chevron arrow
     ctx.beginPath();
-    ctx.moveTo(-6, -4);
-    ctx.lineTo(6, 0);
-    ctx.lineTo(-6, 4);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(-5, -5);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-5, 5);
+    ctx.moveTo(0, -5);
+    ctx.lineTo(5, 0);
+    ctx.lineTo(0, 5);
+    ctx.strokeStyle = COLORS.metalLight;
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.restore();
   }
+
+  // Building outline
+  ctx.strokeStyle = '#202025';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
 }
 
 function getBuildingColor(type: string): string {
@@ -315,42 +427,149 @@ function renderEnemies(ctx: CanvasRenderingContext2D, state: GameState): void {
 
 function renderEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy): void {
   const { position } = enemy;
-  const size = enemy.isBoss ? 24 : 16;
+  const size = enemy.isBoss ? 28 : 18;
 
-  // Enemy body
-  let color: string;
+  // Enemy shadow
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.beginPath();
+  ctx.ellipse(position.x + 2, position.y + size/3, size/2, size/4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Enemy body color based on faction
+  let baseColor: string;
+  let accentColor: string;
   switch (enemy.faction) {
-    case 'hive': color = COLORS.hive; break;
-    case 'machines': color = COLORS.machines; break;
-    case 'void': color = COLORS.void_faction; break;
-    default: color = '#ff0000';
+    case 'hive':
+      baseColor = COLORS.hive;
+      accentColor = '#a03030';
+      break;
+    case 'machines':
+      baseColor = COLORS.machines;
+      accentColor = '#5060a0';
+      break;
+    case 'void':
+      baseColor = COLORS.void_faction;
+      accentColor = '#8030a0';
+      break;
+    default:
+      baseColor = '#802020';
+      accentColor = '#a04040';
   }
 
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(position.x, position.y, size / 2, 0, Math.PI * 2);
-  ctx.fill();
+  // Draw based on faction style
+  if (enemy.faction === 'machines') {
+    // Mechanical enemy - angular shape
+    ctx.fillStyle = baseColor;
+    ctx.beginPath();
+    ctx.moveTo(position.x, position.y - size/2);
+    ctx.lineTo(position.x + size/2, position.y);
+    ctx.lineTo(position.x, position.y + size/2);
+    ctx.lineTo(position.x - size/2, position.y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Metal highlights
+    ctx.strokeStyle = COLORS.metalLight;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Core light
+    ctx.fillStyle = '#6080c0';
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size/6, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (enemy.faction === 'void') {
+    // Void enemy - ethereal
+    ctx.fillStyle = baseColor;
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size/2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner glow
+    ctx.fillStyle = 'rgba(150, 80, 200, 0.5)';
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size/3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Void tendrils
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI / 2) + (Date.now() / 500);
+      ctx.beginPath();
+      ctx.moveTo(position.x, position.y);
+      ctx.lineTo(
+        position.x + Math.cos(angle) * size * 0.7,
+        position.y + Math.sin(angle) * size * 0.7
+      );
+      ctx.stroke();
+    }
+  } else {
+    // Hive enemy - organic
+    ctx.fillStyle = baseColor;
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size/2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Chitin plates
+    ctx.fillStyle = accentColor;
+    ctx.beginPath();
+    ctx.arc(position.x - size/6, position.y - size/6, size/4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#c04040';
+    ctx.beginPath();
+    ctx.arc(position.x - 3, position.y - 2, 2, 0, Math.PI * 2);
+    ctx.arc(position.x + 3, position.y - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Boss indicator
+  if (enemy.isBoss) {
+    ctx.strokeStyle = COLORS.warning;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size/2 + 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Crown spikes
+    ctx.fillStyle = COLORS.warning;
+    for (let i = 0; i < 3; i++) {
+      const angle = -Math.PI/2 + (i - 1) * 0.4;
+      const sx = position.x + Math.cos(angle) * (size/2 + 2);
+      const sy = position.y + Math.sin(angle) * (size/2 + 2);
+      ctx.beginPath();
+      ctx.moveTo(sx - 3, sy + 3);
+      ctx.lineTo(sx, sy - 4);
+      ctx.lineTo(sx + 3, sy + 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
 
   // Flying indicator
   if (enemy.canFly) {
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.arc(position.x, position.y, size / 2 + 3, 0, Math.PI * 2);
+    ctx.arc(position.x, position.y, size / 2 + 5, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  // Health bar
+  // Health bar - industrial style
   const healthPercent = enemy.hp / enemy.maxHp;
-  const barWidth = size + 4;
+  const barWidth = size + 6;
   const barHeight = 3;
   const barX = position.x - barWidth / 2;
-  const barY = position.y - size / 2 - 6;
+  const barY = position.y - size / 2 - 8;
 
-  ctx.fillStyle = COLORS.healthBarBg;
-  ctx.fillRect(barX, barY, barWidth, barHeight);
+  ctx.fillStyle = '#101010';
+  ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
 
-  ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+  ctx.fillStyle = healthPercent > 0.5 ? '#508050' : healthPercent > 0.25 ? '#a08030' : '#803030';
   ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
 }
 
@@ -361,60 +580,144 @@ function renderEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy): void {
 function renderPlayer(ctx: CanvasRenderingContext2D, state: GameState): void {
   const { player } = state;
   const { position } = player;
-  const size = 20;
+  const size = 22;
 
-  if (player.isDead) {
-    // Dead player indicator
-    ctx.fillStyle = COLORS.playerDead;
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, size / 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = 'white';
-    ctx.font = '12px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('X', position.x, position.y);
-    return;
-  }
-
-  // Invincibility glow
-  if (player.invincible) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Player body
-  ctx.fillStyle = COLORS.player;
-  ctx.beginPath();
-  ctx.arc(position.x, position.y, size / 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Aim direction
+  // Aim direction calculation
   const angle = Math.atan2(
     state.input.mouseWorldY - position.y,
     state.input.mouseWorldX - position.x
   );
 
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(position.x, position.y);
-  ctx.lineTo(
-    position.x + Math.cos(angle) * (size / 2 + 8),
-    position.y + Math.sin(angle) * (size / 2 + 8)
-  );
-  ctx.stroke();
-
-  // Commander mode indicator
-  if (player.commanderMode) {
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 2;
+  if (player.isDead) {
+    // Dead mech - wreckage
+    ctx.fillStyle = COLORS.metalDark;
     ctx.beginPath();
-    ctx.arc(position.x, position.y, size / 2 + 5, 0, Math.PI * 2);
+    ctx.arc(position.x, position.y, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Damage marks
+    ctx.fillStyle = COLORS.rust;
+    ctx.fillRect(position.x - 4, position.y - 2, 8, 4);
+
+    // Sparks
+    ctx.fillStyle = '#c06020';
+    ctx.beginPath();
+    ctx.arc(position.x + 3, position.y - 3, 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.beginPath();
+  ctx.ellipse(position.x + 2, position.y + size/3, size/2, size/4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Invincibility shield effect
+  if (player.invincible) {
+    ctx.fillStyle = 'rgba(100, 160, 200, 0.2)';
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size + 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(150, 200, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size + 4, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Mech body - hexagonal shape
+  ctx.save();
+  ctx.translate(position.x, position.y);
+  ctx.rotate(angle);
+
+  // Main hull
+  ctx.fillStyle = COLORS.metalDark;
+  ctx.beginPath();
+  ctx.moveTo(size/2 + 2, 0);
+  ctx.lineTo(size/3, -size/2);
+  ctx.lineTo(-size/3, -size/2);
+  ctx.lineTo(-size/2, 0);
+  ctx.lineTo(-size/3, size/2);
+  ctx.lineTo(size/3, size/2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Hull highlight
+  ctx.fillStyle = COLORS.player;
+  ctx.beginPath();
+  ctx.moveTo(size/2, 0);
+  ctx.lineTo(size/3 - 2, -size/2 + 3);
+  ctx.lineTo(-size/3 + 2, -size/2 + 3);
+  ctx.lineTo(-size/2 + 2, 0);
+  ctx.lineTo(-size/3 + 2, size/2 - 3);
+  ctx.lineTo(size/3 - 2, size/2 - 3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cockpit
+  ctx.fillStyle = '#405060';
+  ctx.beginPath();
+  ctx.arc(0, 0, size/4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cockpit glass
+  ctx.fillStyle = '#608090';
+  ctx.beginPath();
+  ctx.arc(-1, -1, size/6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Weapon mount
+  ctx.fillStyle = COLORS.metal;
+  ctx.fillRect(size/3, -3, size/3, 6);
+
+  // Weapon barrel
+  ctx.fillStyle = COLORS.metalDark;
+  ctx.fillRect(size/2, -2, size/3, 4);
+
+  // Thruster exhausts
+  ctx.fillStyle = '#303030';
+  ctx.fillRect(-size/2 - 2, -4, 4, 3);
+  ctx.fillRect(-size/2 - 2, 1, 4, 3);
+
+  ctx.restore();
+
+  // Engine glow
+  const thrustGlow = 0.3 + Math.sin(Date.now() / 100) * 0.1;
+  ctx.fillStyle = `rgba(180, 100, 40, ${thrustGlow})`;
+  ctx.beginPath();
+  ctx.arc(
+    position.x - Math.cos(angle) * (size/2 + 2),
+    position.y - Math.sin(angle) * (size/2 + 2),
+    4, 0, Math.PI * 2
+  );
+  ctx.fill();
+
+  // Commander mode indicator - tactical overlay
+  if (player.commanderMode) {
+    ctx.strokeStyle = COLORS.warning;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, size + 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Direction markers
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2;
+      ctx.fillStyle = COLORS.warning;
+      ctx.beginPath();
+      ctx.arc(
+        position.x + Math.cos(a) * (size + 8),
+        position.y + Math.sin(a) * (size + 8),
+        2, 0, Math.PI * 2
+      );
+      ctx.fill();
+    }
   }
 }
 
@@ -425,30 +728,74 @@ function renderPlayer(ctx: CanvasRenderingContext2D, state: GameState): void {
 function renderProjectiles(ctx: CanvasRenderingContext2D, state: GameState): void {
   for (const proj of state.projectiles) {
     let color: string;
+    let glowColor: string;
     switch (proj.owner) {
-      case 'player': color = COLORS.playerProjectile; break;
-      case 'turret': color = COLORS.turretProjectile; break;
-      case 'enemy': color = COLORS.enemyProjectile; break;
-      default: color = '#ffffff';
+      case 'player':
+        color = COLORS.playerProjectile;
+        glowColor = 'rgba(192, 208, 0, 0.4)';
+        break;
+      case 'turret':
+        color = COLORS.turretProjectile;
+        glowColor = 'rgba(208, 96, 0, 0.4)';
+        break;
+      case 'enemy':
+        color = COLORS.enemyProjectile;
+        glowColor = 'rgba(192, 32, 32, 0.4)';
+        break;
+      default:
+        color = '#ffffff';
+        glowColor = 'rgba(255, 255, 255, 0.3)';
     }
 
-    ctx.fillStyle = color;
+    const angle = Math.atan2(proj.velocity.y, proj.velocity.x);
+    const size = proj.explosive ? 6 : 4;
+
+    // Projectile glow
+    ctx.fillStyle = glowColor;
     ctx.beginPath();
-    ctx.arc(proj.position.x, proj.position.y, proj.explosive ? 6 : 4, 0, Math.PI * 2);
+    ctx.arc(proj.position.x, proj.position.y, size + 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Trail
-    const trailLength = 10;
-    const angle = Math.atan2(proj.velocity.y, proj.velocity.x);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    // Projectile core
+    ctx.fillStyle = color;
+    ctx.save();
+    ctx.translate(proj.position.x, proj.position.y);
+    ctx.rotate(angle);
+
+    // Elongated bullet shape
     ctx.beginPath();
-    ctx.moveTo(proj.position.x, proj.position.y);
-    ctx.lineTo(
-      proj.position.x - Math.cos(angle) * trailLength,
-      proj.position.y - Math.sin(angle) * trailLength
-    );
-    ctx.stroke();
+    ctx.moveTo(size, 0);
+    ctx.lineTo(-size/2, -size/2);
+    ctx.lineTo(-size, 0);
+    ctx.lineTo(-size/2, size/2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // Trail - multiple segments for smoke effect
+    const trailSegments = 3;
+    for (let i = 1; i <= trailSegments; i++) {
+      const alpha = 0.3 - (i * 0.08);
+      const trailDist = i * 6;
+      ctx.fillStyle = `rgba(100, 100, 90, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(
+        proj.position.x - Math.cos(angle) * trailDist,
+        proj.position.y - Math.sin(angle) * trailDist,
+        size - i, 0, Math.PI * 2
+      );
+      ctx.fill();
+    }
+
+    // Explosive indicator
+    if (proj.explosive) {
+      ctx.strokeStyle = COLORS.warning;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(proj.position.x, proj.position.y, size + 1, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 }
 
@@ -569,128 +916,256 @@ function renderPlayerHUD(
 ): void {
   const { player } = state;
   const hudX = 10;
-  const hudY = canvasHeight - 80;
+  const hudY = canvasHeight - 90;
+
+  // HUD background panel
+  ctx.fillStyle = 'rgba(20, 20, 25, 0.9)';
+  ctx.fillRect(hudX - 5, hudY - 5, 220, 85);
+  ctx.strokeStyle = '#404050';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(hudX - 5, hudY - 5, 220, 85);
+
+  // Corner accents
+  ctx.fillStyle = '#505060';
+  ctx.fillRect(hudX - 5, hudY - 5, 8, 2);
+  ctx.fillRect(hudX - 5, hudY - 5, 2, 8);
+  ctx.fillRect(hudX + 207, hudY + 72, 8, 2);
+  ctx.fillRect(hudX + 213, hudY + 66, 2, 8);
 
   // Health bar
-  ctx.fillStyle = '#333333';
-  ctx.fillRect(hudX, hudY, 200, 20);
+  ctx.fillStyle = '#101015';
+  ctx.fillRect(hudX, hudY, 200, 18);
 
-  ctx.fillStyle = player.hp > player.maxHp * 0.5 ? '#00ff00' : player.hp > player.maxHp * 0.25 ? '#ffff00' : '#ff0000';
-  ctx.fillRect(hudX, hudY, 200 * (player.hp / player.maxHp), 20);
+  const healthPct = player.hp / player.maxHp;
+  ctx.fillStyle = healthPct > 0.5 ? '#508050' : healthPct > 0.25 ? '#a08030' : '#803030';
+  ctx.fillRect(hudX + 1, hudY + 1, 198 * healthPct, 16);
 
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeRect(hudX, hudY, 200, 20);
+  // Health bar segments
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+  for (let i = 1; i < 10; i++) {
+    ctx.beginPath();
+    ctx.moveTo(hudX + i * 20, hudY);
+    ctx.lineTo(hudX + i * 20, hudY + 18);
+    ctx.stroke();
+  }
 
-  ctx.fillStyle = 'white';
-  ctx.font = '12px monospace';
+  ctx.strokeStyle = '#606070';
+  ctx.strokeRect(hudX, hudY, 200, 18);
+
+  ctx.fillStyle = '#c0c0b0';
+  ctx.font = 'bold 11px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(`HP: ${Math.floor(player.hp)}/${player.maxHp}`, hudX + 100, hudY + 14);
+  ctx.fillText(`HULL ${Math.floor(player.hp)}/${player.maxHp}`, hudX + 100, hudY + 13);
 
   // Energy bar
-  ctx.fillStyle = '#333333';
-  ctx.fillRect(hudX, hudY + 25, 200, 15);
+  ctx.fillStyle = '#101015';
+  ctx.fillRect(hudX, hudY + 22, 200, 14);
 
-  ctx.fillStyle = '#00bfff';
-  ctx.fillRect(hudX, hudY + 25, 200 * (player.energy / player.maxEnergy), 15);
+  ctx.fillStyle = '#406080';
+  ctx.fillRect(hudX + 1, hudY + 23, 198 * (player.energy / player.maxEnergy), 12);
 
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeRect(hudX, hudY + 25, 200, 15);
+  ctx.strokeStyle = '#506070';
+  ctx.strokeRect(hudX, hudY + 22, 200, 14);
 
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = '#a0b0c0';
   ctx.font = '10px monospace';
-  ctx.fillText(`Energy: ${Math.floor(player.energy)}`, hudX + 100, hudY + 36);
+  ctx.fillText(`POWER ${Math.floor(player.energy)}`, hudX + 100, hudY + 33);
 
-  // Weapon
+  // Weapon indicator
   ctx.textAlign = 'left';
-  ctx.fillText(`Weapon: ${player.currentWeapon}`, hudX, hudY + 58);
+  ctx.fillStyle = '#808080';
+  ctx.font = '9px monospace';
+  ctx.fillText('WEAPON', hudX, hudY + 50);
+  ctx.fillStyle = '#c0c0b0';
+  ctx.fillText(player.currentWeapon.toUpperCase(), hudX + 50, hudY + 50);
 
-  // Abilities
-  let abilityX = hudX + 220;
+  // Abilities panel
+  ctx.fillStyle = 'rgba(20, 20, 25, 0.9)';
+  ctx.fillRect(hudX + 220, hudY - 5, 190, 85);
+  ctx.strokeStyle = '#404050';
+  ctx.strokeRect(hudX + 220, hudY - 5, 190, 85);
+
+  let abilityX = hudX + 228;
   for (const ability of player.abilities) {
     const abilityState = player.abilityStates[ability];
     const ready = abilityState.cooldownRemaining <= 0 && !abilityState.active;
 
-    ctx.fillStyle = abilityState.active ? '#00ff00' : ready ? '#4444ff' : '#444444';
-    ctx.fillRect(abilityX, hudY, 40, 40);
+    // Ability button background
+    ctx.fillStyle = '#101015';
+    ctx.fillRect(abilityX, hudY, 38, 38);
 
-    ctx.strokeStyle = ready ? '#ffffff' : '#666666';
-    ctx.strokeRect(abilityX, hudY, 40, 40);
-
-    ctx.fillStyle = 'white';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(ability.slice(0, 4).toUpperCase(), abilityX + 20, hudY + 15);
-
-    if (abilityState.cooldownRemaining > 0) {
-      ctx.fillText(`${Math.ceil(abilityState.cooldownRemaining)}s`, abilityX + 20, hudY + 30);
+    if (abilityState.active) {
+      ctx.fillStyle = 'rgba(80, 160, 80, 0.3)';
+      ctx.fillRect(abilityX + 1, hudY + 1, 36, 36);
+    } else if (ready) {
+      ctx.fillStyle = 'rgba(60, 80, 100, 0.3)';
+      ctx.fillRect(abilityX + 1, hudY + 1, 36, 36);
     }
 
-    abilityX += 45;
+    // Cooldown overlay
+    if (abilityState.cooldownRemaining > 0) {
+      const cdPct = abilityState.cooldownRemaining / 10; // Assume 10s max cooldown
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(abilityX + 1, hudY + 1, 36, 36 * Math.min(cdPct, 1));
+    }
+
+    ctx.strokeStyle = abilityState.active ? '#70a060' : ready ? '#607080' : '#303040';
+    ctx.lineWidth = ready ? 2 : 1;
+    ctx.strokeRect(abilityX, hudY, 38, 38);
+
+    ctx.fillStyle = ready ? '#c0c0b0' : '#606060';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(ability.slice(0, 4).toUpperCase(), abilityX + 19, hudY + 16);
+
+    if (abilityState.cooldownRemaining > 0) {
+      ctx.fillStyle = '#a08030';
+      ctx.fillText(`${Math.ceil(abilityState.cooldownRemaining)}`, abilityX + 19, hudY + 30);
+    }
+
+    abilityX += 42;
   }
 
-  // Respawn timer
+  // Ability label
+  ctx.fillStyle = '#606060';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('ABILITIES [1-4]', hudX + 228, hudY + 52);
+
+  // Respawn overlay
   if (player.isDead) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(canvasWidth / 2 - 100, canvasHeight / 2 - 30, 200, 60);
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
+    ctx.fillRect(canvasWidth / 2 - 120, canvasHeight / 2 - 40, 240, 80);
+    ctx.strokeStyle = '#803030';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(canvasWidth / 2 - 120, canvasHeight / 2 - 40, 240, 80);
 
-    ctx.fillStyle = '#ff0000';
-    ctx.font = '20px monospace';
+    ctx.fillStyle = '#c03030';
+    ctx.font = 'bold 24px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('DEAD', canvasWidth / 2, canvasHeight / 2 - 5);
+    ctx.fillText('MECH DESTROYED', canvasWidth / 2, canvasHeight / 2 - 8);
 
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#a0a090';
     ctx.font = '14px monospace';
-    ctx.fillText(`Respawn in ${Math.ceil(player.respawnTimer)}s`, canvasWidth / 2, canvasHeight / 2 + 20);
+    ctx.fillText(`RECONSTRUCTING: ${Math.ceil(player.respawnTimer)}s`, canvasWidth / 2, canvasHeight / 2 + 20);
   }
 }
 
 function renderResources(ctx: CanvasRenderingContext2D, state: GameState): void {
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(10, 10, 180, 200);
+  // Panel background
+  ctx.fillStyle = 'rgba(15, 15, 20, 0.92)';
+  ctx.fillRect(10, 10, 190, 210);
+  ctx.strokeStyle = '#404050';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(10, 10, 190, 210);
 
-  ctx.fillStyle = 'white';
-  ctx.font = '12px monospace';
-  ctx.textAlign = 'left';
+  // Header
+  ctx.fillStyle = '#505060';
+  ctx.fillRect(10, 10, 190, 20);
+  ctx.fillStyle = '#b0b0a0';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('INVENTORY', 105, 24);
+
+  // Corner bolts
+  ctx.fillStyle = '#606070';
+  ctx.fillRect(12, 12, 4, 4);
+  ctx.fillRect(194, 12, 4, 4);
 
   const resources = [
-    { key: 'iron_ore', label: 'Iron Ore' },
-    { key: 'copper_ore', label: 'Copper Ore' },
-    { key: 'coal', label: 'Coal' },
-    { key: 'stone', label: 'Stone' },
-    { key: 'iron_ingot', label: 'Iron Ingot' },
-    { key: 'copper_wire', label: 'Copper Wire' },
-    { key: 'steel', label: 'Steel' },
-    { key: 'circuits', label: 'Circuits' },
-    { key: 'biomass', label: 'Biomass' },
-    { key: 'crystal_shards', label: 'Crystals' },
-    { key: 'dark_matter', label: 'Dark Matter' },
+    { key: 'iron_ore', label: 'IRON ORE', color: '#8a7050' },
+    { key: 'copper_ore', label: 'COPPER ORE', color: '#a06840' },
+    { key: 'coal', label: 'COAL', color: '#404040' },
+    { key: 'stone', label: 'STONE', color: '#606060' },
+    { key: 'iron_ingot', label: 'IRON INGOT', color: '#7080a0' },
+    { key: 'copper_wire', label: 'COPPER WIRE', color: '#c08050' },
+    { key: 'steel', label: 'STEEL', color: '#8090a0' },
+    { key: 'circuits', label: 'CIRCUITS', color: '#50a070' },
+    { key: 'biomass', label: 'BIOMASS', color: '#608040' },
+    { key: 'crystal_shards', label: 'CRYSTALS', color: '#8060b0' },
+    { key: 'dark_matter', label: 'DARK MATTER', color: '#6040a0' },
   ];
 
-  let y = 28;
-  for (const { key, label } of resources) {
+  let y = 42;
+  ctx.textAlign = 'left';
+  for (const { key, label, color } of resources) {
     const amount = state.resources[key as keyof typeof state.resources] || 0;
     if (amount > 0 || ['iron_ore', 'copper_ore', 'coal', 'stone'].includes(key)) {
-      ctx.fillText(`${label}: ${amount}`, 20, y);
+      // Resource icon
+      ctx.fillStyle = color;
+      ctx.fillRect(18, y - 8, 8, 8);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeRect(18, y - 8, 8, 8);
+
+      // Resource name
+      ctx.fillStyle = '#909080';
+      ctx.font = '9px monospace';
+      ctx.fillText(label, 32, y);
+
+      // Resource amount
+      ctx.fillStyle = '#c0c0b0';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${amount}`, 190, y);
+      ctx.textAlign = 'left';
+
       y += 16;
     }
   }
 }
 
 function renderWaveInfo(ctx: CanvasRenderingContext2D, state: GameState, canvasWidth: number): void {
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(canvasWidth - 200, 10, 190, 60);
+  const panelX = canvasWidth - 210;
 
-  ctx.fillStyle = 'white';
-  ctx.font = '12px monospace';
+  // Panel background
+  ctx.fillStyle = 'rgba(15, 15, 20, 0.92)';
+  ctx.fillRect(panelX, 10, 200, 70);
+  ctx.strokeStyle = '#404050';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(panelX, 10, 200, 70);
+
+  // Header
+  ctx.fillStyle = state.activeWave ? '#803030' : '#505060';
+  ctx.fillRect(panelX, 10, 200, 18);
+  ctx.fillStyle = '#b0b0a0';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(state.activeWave ? 'WAVE IN PROGRESS' : 'DEFENSE STATUS', panelX + 100, 23);
+
+  // Wave counter
+  ctx.fillStyle = '#808080';
+  ctx.font = '9px monospace';
   ctx.textAlign = 'left';
-
-  ctx.fillText(`Waves Completed: ${state.wavesCompleted}`, canvasWidth - 190, 30);
+  ctx.fillText('WAVES CLEARED', panelX + 10, 42);
+  ctx.fillStyle = '#c0c0b0';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${state.wavesCompleted}`, panelX + 190, 42);
 
   if (state.activeWave) {
-    ctx.fillText(`Enemies: ${state.enemies.size}/${state.activeWave.totalEnemies}`, canvasWidth - 190, 50);
+    // Enemy count
+    ctx.fillStyle = '#a04040';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('HOSTILES', panelX + 10, 60);
+
+    ctx.fillStyle = '#c0c0b0';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${state.enemies.size} / ${state.activeWave.totalEnemies}`, panelX + 190, 60);
+
+    // Progress bar
+    const progress = 1 - (state.enemies.size / state.activeWave.totalEnemies);
+    ctx.fillStyle = '#101015';
+    ctx.fillRect(panelX + 10, 66, 180, 6);
+    ctx.fillStyle = '#508050';
+    ctx.fillRect(panelX + 10, 66, 180 * progress, 6);
   } else {
-    ctx.fillStyle = '#00ff00';
-    ctx.fillText('Press W to summon wave', canvasWidth - 190, 50);
+    // Ready indicator
+    ctx.fillStyle = '#506050';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('[ V ] SUMMON WAVE', panelX + 100, 62);
   }
 }
 
@@ -739,24 +1214,45 @@ function renderBuildMenu(
 }
 
 function renderControlsHint(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void {
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.fillRect(canvasWidth - 200, canvasHeight - 100, 190, 90);
+  const panelX = canvasWidth - 180;
+  const panelY = canvasHeight - 105;
 
-  ctx.fillStyle = '#888888';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'left';
+  // Panel background
+  ctx.fillStyle = 'rgba(15, 15, 20, 0.8)';
+  ctx.fillRect(panelX, panelY, 170, 95);
+  ctx.strokeStyle = '#303040';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(panelX, panelY, 170, 95);
+
+  // Header
+  ctx.fillStyle = '#404050';
+  ctx.fillRect(panelX, panelY, 170, 14);
+  ctx.fillStyle = '#808080';
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('CONTROLS', panelX + 85, panelY + 10);
 
   const controls = [
-    'WASD - Move',
-    'Mouse - Aim/Shoot',
-    'Tab - Build Menu',
-    'Space - Dash',
-    'Q - Commander Mode',
+    { key: 'WASD', action: 'MOVE' },
+    { key: 'MOUSE', action: 'AIM/FIRE' },
+    { key: 'TAB', action: 'BUILD MENU' },
+    { key: 'SPACE', action: 'DASH' },
+    { key: 'Q', action: 'COMMANDER' },
   ];
 
-  let y = canvasHeight - 85;
-  for (const control of controls) {
-    ctx.fillText(control, canvasWidth - 190, y);
-    y += 15;
+  ctx.font = '9px monospace';
+  let y = panelY + 28;
+  for (const { key, action } of controls) {
+    // Key
+    ctx.fillStyle = '#606060';
+    ctx.textAlign = 'left';
+    ctx.fillText(key, panelX + 8, y);
+
+    // Action
+    ctx.fillStyle = '#909080';
+    ctx.textAlign = 'right';
+    ctx.fillText(action, panelX + 162, y);
+
+    y += 14;
   }
 }
