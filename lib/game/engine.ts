@@ -41,14 +41,14 @@ export function createInitialState(): GameState {
     buildings: new Map(),
 
     resources: {
-      iron_ore: 50,
-      copper_ore: 30,
-      coal: 40,
-      stone: 100,
+      iron_ore: 500,
+      copper_ore: 300,
+      coal: 400,
+      stone: 1000,
       water: 0,
-      iron_ingot: 20,
-      copper_ingot: 10,
-      copper_wire: 5,
+      iron_ingot: 200,
+      copper_ingot: 100,
+      copper_wire: 50,
       silicon: 0,
       steel: 0,
       circuits: 0,
@@ -458,8 +458,16 @@ function updateBuildings(state: GameState, dt: number): void {
       case 'repair_station':
         updateRepairStation(state, building, dt);
         break;
+      case 'conveyor':
+      case 'conveyor_junction':
+      case 'conveyor_router':
+        updateConveyor(state, building, dt);
+        break;
     }
   }
+
+  // After all buildings update, transfer items between conveyors
+  transferConveyorItems(state);
 }
 
 function updatePowerStatus(state: GameState): void {
@@ -493,10 +501,25 @@ function updatePowerStatus(state: GameState): void {
     }
   }
 
-  // Core is always powered
+  // Core is always powered AND provides power to nearby buildings
   for (const building of state.buildings.values()) {
     if (building.type === 'core') {
       building.powered = true;
+
+      // Core powers buildings within radius 36
+      const coreRadius = 36;
+      const centerX = building.gridX + building.width / 2;
+      const centerY = building.gridY + building.height / 2;
+
+      for (const other of state.buildings.values()) {
+        const otherCenterX = other.gridX + other.width / 2;
+        const otherCenterY = other.gridY + other.height / 2;
+        const dist = Math.sqrt((centerX - otherCenterX) ** 2 + (centerY - otherCenterY) ** 2);
+
+        if (dist <= coreRadius) {
+          other.powered = true;
+        }
+      }
     }
   }
 }
@@ -520,12 +543,133 @@ function updateExtractor(state: GameState, building: Building, dt: number): void
       default: return;
     }
 
-    // Add to output storage
-    const existing = building.outputStorage.find(s => s.type === resourceType);
-    if (existing) {
-      existing.amount += 1;
+    // Add to output storage or push to adjacent conveyor
+    const adjacentConveyor = findAdjacentConveyor(state, building);
+    if (adjacentConveyor) {
+      // Push directly to conveyor
+      const conveyorBldg = adjacentConveyor as any;
+      if (!conveyorBldg.items) conveyorBldg.items = [];
+      if (conveyorBldg.items.length < 3) { // Max 3 items per conveyor
+        conveyorBldg.items.push({ resource: resourceType, progress: 0 });
+      }
     } else {
-      building.outputStorage.push({ type: resourceType, amount: 1 });
+      // Store locally
+      const existing = building.outputStorage.find(s => s.type === resourceType);
+      if (existing) {
+        existing.amount += 1;
+      } else {
+        building.outputStorage.push({ type: resourceType, amount: 1 });
+      }
+    }
+  }
+}
+
+function findAdjacentConveyor(state: GameState, building: Building): Building | null {
+  // Check all 4 directions for a conveyor
+  const checkPositions = [
+    { x: building.gridX + building.width, y: building.gridY }, // right
+    { x: building.gridX - 1, y: building.gridY }, // left
+    { x: building.gridX, y: building.gridY + building.height }, // down
+    { x: building.gridX, y: building.gridY - 1 }, // up
+  ];
+
+  for (const pos of checkPositions) {
+    for (const other of state.buildings.values()) {
+      if (
+        (other.type === 'conveyor' || other.type === 'conveyor_junction' || other.type === 'conveyor_router') &&
+        other.gridX === pos.x && other.gridY === pos.y
+      ) {
+        return other;
+      }
+    }
+  }
+  return null;
+}
+
+function updateConveyor(state: GameState, building: Building, dt: number): void {
+  const conveyor = building as any;
+  if (!conveyor.items) conveyor.items = [];
+
+  // Move items along the conveyor
+  const speed = 0.5; // Items move at 0.5 progress per second
+  for (const item of conveyor.items) {
+    item.progress += speed * dt;
+  }
+}
+
+function transferConveyorItems(state: GameState): void {
+  // Transfer items that have reached the end of conveyors
+  for (const building of state.buildings.values()) {
+    if (building.type !== 'conveyor' && building.type !== 'conveyor_junction' && building.type !== 'conveyor_router') {
+      continue;
+    }
+
+    const conveyor = building as any;
+    if (!conveyor.items) continue;
+
+    // Find items that are ready to transfer (progress >= 1)
+    const readyItems = conveyor.items.filter((item: any) => item.progress >= 1);
+
+    for (const item of readyItems) {
+      // Find next building in direction
+      const dir = building.direction || 'right';
+      let nextX = building.gridX;
+      let nextY = building.gridY;
+
+      switch (dir) {
+        case 'right': nextX += 1; break;
+        case 'left': nextX -= 1; break;
+        case 'down': nextY += 1; break;
+        case 'up': nextY -= 1; break;
+      }
+
+      // Find building at next position
+      let nextBuilding: Building | null = null;
+      for (const other of state.buildings.values()) {
+        if (other.gridX === nextX && other.gridY === nextY) {
+          nextBuilding = other;
+          break;
+        }
+        // Also check if it's a multi-tile building
+        if (
+          nextX >= other.gridX && nextX < other.gridX + other.width &&
+          nextY >= other.gridY && nextY < other.gridY + other.height
+        ) {
+          nextBuilding = other;
+          break;
+        }
+      }
+
+      if (nextBuilding) {
+        if (nextBuilding.type === 'conveyor' || nextBuilding.type === 'conveyor_junction' || nextBuilding.type === 'conveyor_router') {
+          // Transfer to next conveyor
+          const nextConveyor = nextBuilding as any;
+          if (!nextConveyor.items) nextConveyor.items = [];
+          if (nextConveyor.items.length < 3) {
+            nextConveyor.items.push({ resource: item.resource, progress: 0 });
+            conveyor.items = conveyor.items.filter((i: any) => i !== item);
+          }
+        } else if (nextBuilding.type === 'storage' || nextBuilding.type === 'core') {
+          // Deposit into storage or core (add to global resources)
+          const resType = item.resource as ResourceType;
+          state.resources[resType] = (state.resources[resType] || 0) + 1;
+          conveyor.items = conveyor.items.filter((i: any) => i !== item);
+        } else if (nextBuilding.type === 'smelter' || nextBuilding.type === 'assembler') {
+          // Add to input storage
+          const existing = nextBuilding.inputStorage.find(s => s.type === item.resource);
+          if (existing) {
+            existing.amount += 1;
+          } else {
+            nextBuilding.inputStorage.push({ type: item.resource, amount: 1 });
+          }
+          conveyor.items = conveyor.items.filter((i: any) => i !== item);
+        }
+      } else {
+        // No next building, item falls off - add to global storage
+        const resType = item.resource as ResourceType;
+        state.resources[resType] = (state.resources[resType] || 0) + 1;
+        conveyor.items = conveyor.items.filter((i: any) => i !== item);
+      }
     }
   }
 }

@@ -462,7 +462,83 @@ function getBuildingLabel(type: string): string {
 // ============================================================================
 
 function renderConveyorItems(ctx: CanvasRenderingContext2D, state: GameState): void {
-  // TODO: Render items on conveyors
+  const ITEM_COLORS: Record<string, string> = {
+    iron_ore: '#8a7a6a',
+    copper_ore: '#c07040',
+    coal: '#2a2a2a',
+    stone: '#6a6a6a',
+    iron_ingot: '#b0b0b0',
+    copper_ingot: '#e08050',
+    copper_wire: '#d07040',
+    silicon: '#a0a0c0',
+    steel: '#808090',
+    circuits: '#40a040',
+    glass: '#a0c0d0',
+    biomass: '#50a050',
+    crystal_shards: '#8040c0',
+    dark_matter: '#200040',
+    void_essence: '#6020a0',
+  };
+
+  for (const building of state.buildings.values()) {
+    if (building.type !== 'conveyor' && building.type !== 'conveyor_junction' && building.type !== 'conveyor_router') {
+      continue;
+    }
+
+    const conveyor = building as any;
+    if (!conveyor.items || conveyor.items.length === 0) continue;
+
+    const baseX = building.gridX * TILE_SIZE;
+    const baseY = building.gridY * TILE_SIZE;
+    const dir = building.direction || 'right';
+
+    for (const item of conveyor.items) {
+      // Calculate item position based on progress and direction
+      let itemX = baseX + TILE_SIZE / 2;
+      let itemY = baseY + TILE_SIZE / 2;
+      const progress = Math.min(item.progress, 1);
+
+      switch (dir) {
+        case 'right':
+          itemX = baseX + progress * TILE_SIZE;
+          itemY = baseY + TILE_SIZE / 2;
+          break;
+        case 'left':
+          itemX = baseX + TILE_SIZE - progress * TILE_SIZE;
+          itemY = baseY + TILE_SIZE / 2;
+          break;
+        case 'down':
+          itemX = baseX + TILE_SIZE / 2;
+          itemY = baseY + progress * TILE_SIZE;
+          break;
+        case 'up':
+          itemX = baseX + TILE_SIZE / 2;
+          itemY = baseY + TILE_SIZE - progress * TILE_SIZE;
+          break;
+      }
+
+      // Draw item as a small colored square with border
+      const itemSize = TILE_SIZE * 0.35;
+      const color = ITEM_COLORS[item.resource] || '#808080';
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(itemX - itemSize/2 + 1, itemY - itemSize/2 + 1, itemSize, itemSize);
+
+      // Item body
+      ctx.fillStyle = color;
+      ctx.fillRect(itemX - itemSize/2, itemY - itemSize/2, itemSize, itemSize);
+
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(itemX - itemSize/2, itemY - itemSize/2, itemSize, itemSize * 0.3);
+
+      // Border
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(itemX - itemSize/2, itemY - itemSize/2, itemSize, itemSize);
+    }
+  }
 }
 
 // ============================================================================
