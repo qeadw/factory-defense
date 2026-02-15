@@ -476,103 +476,62 @@ function renderEnemies(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function renderEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy): void {
-  const { position } = enemy;
-  const size = enemy.isBoss ? 28 : 18;
+  const { position, type } = enemy;
+  const baseSize = enemy.isBoss ? 28 : 18;
 
   // Enemy shadow
   ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.beginPath();
-  ctx.ellipse(position.x + 2, position.y + size/3, size/2, size/4, 0, 0, Math.PI * 2);
+  ctx.ellipse(position.x + 2, position.y + baseSize/3, baseSize/2, baseSize/4, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Enemy body color based on faction
-  let baseColor: string;
-  let accentColor: string;
-  switch (enemy.faction) {
-    case 'hive':
-      baseColor = COLORS.hive;
-      accentColor = '#a03030';
+  // Render based on enemy type
+  switch (type) {
+    // ===== HIVE ENEMIES =====
+    case 'swarmer':
+      renderSwarmer(ctx, position, baseSize * 0.7);
       break;
-    case 'machines':
-      baseColor = COLORS.machines;
-      accentColor = '#5060a0';
+    case 'spitter':
+      renderSpitter(ctx, position, baseSize);
       break;
-    case 'void':
-      baseColor = COLORS.void_faction;
-      accentColor = '#8030a0';
+    case 'brute':
+      renderBrute(ctx, position, baseSize * 1.3);
       break;
+    case 'queen':
+      renderQueen(ctx, position, baseSize * 1.5);
+      break;
+
+    // ===== MACHINE ENEMIES =====
+    case 'drone':
+      renderDrone(ctx, position, baseSize * 0.8);
+      break;
+    case 'walker':
+      renderWalker(ctx, position, baseSize);
+      break;
+    case 'tank':
+      renderTank(ctx, position, baseSize * 1.4);
+      break;
+    case 'overseer':
+      renderOverseer(ctx, position, baseSize * 1.5);
+      break;
+
+    // ===== VOID ENEMIES =====
+    case 'wraith':
+      renderWraith(ctx, position, baseSize * 0.9);
+      break;
+    case 'corruptor':
+      renderCorruptor(ctx, position, baseSize * 1.1);
+      break;
+    case 'void_lord':
+      renderVoidLord(ctx, position, baseSize * 1.6);
+      break;
+
     default:
-      baseColor = '#802020';
-      accentColor = '#a04040';
-  }
-
-  // Draw based on faction style
-  if (enemy.faction === 'machines') {
-    // Mechanical enemy - angular shape
-    ctx.fillStyle = baseColor;
-    ctx.beginPath();
-    ctx.moveTo(position.x, position.y - size/2);
-    ctx.lineTo(position.x + size/2, position.y);
-    ctx.lineTo(position.x, position.y + size/2);
-    ctx.lineTo(position.x - size/2, position.y);
-    ctx.closePath();
-    ctx.fill();
-
-    // Metal highlights
-    ctx.strokeStyle = COLORS.metalLight;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Core light
-    ctx.fillStyle = '#6080c0';
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, size/6, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (enemy.faction === 'void') {
-    // Void enemy - ethereal
-    ctx.fillStyle = baseColor;
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, size/2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Inner glow
-    ctx.fillStyle = 'rgba(150, 80, 200, 0.5)';
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, size/3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Void tendrils
-    ctx.strokeStyle = accentColor;
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 4; i++) {
-      const angle = (i * Math.PI / 2) + (Date.now() / 500);
+      // Fallback generic enemy
+      ctx.fillStyle = '#802020';
       ctx.beginPath();
-      ctx.moveTo(position.x, position.y);
-      ctx.lineTo(
-        position.x + Math.cos(angle) * size * 0.7,
-        position.y + Math.sin(angle) * size * 0.7
-      );
-      ctx.stroke();
-    }
-  } else {
-    // Hive enemy - organic
-    ctx.fillStyle = baseColor;
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, size/2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Chitin plates
-    ctx.fillStyle = accentColor;
-    ctx.beginPath();
-    ctx.arc(position.x - size/6, position.y - size/6, size/4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eyes
-    ctx.fillStyle = '#c04040';
-    ctx.beginPath();
-    ctx.arc(position.x - 3, position.y - 2, 2, 0, Math.PI * 2);
-    ctx.arc(position.x + 3, position.y - 2, 2, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.arc(position.x, position.y, baseSize/2, 0, Math.PI * 2);
+      ctx.fill();
   }
 
   // Boss indicator
@@ -580,15 +539,15 @@ function renderEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy): void {
     ctx.strokeStyle = COLORS.warning;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(position.x, position.y, size/2 + 4, 0, Math.PI * 2);
+    ctx.arc(position.x, position.y, baseSize/2 + 6, 0, Math.PI * 2);
     ctx.stroke();
 
     // Crown spikes
     ctx.fillStyle = COLORS.warning;
     for (let i = 0; i < 3; i++) {
       const angle = -Math.PI/2 + (i - 1) * 0.4;
-      const sx = position.x + Math.cos(angle) * (size/2 + 2);
-      const sy = position.y + Math.sin(angle) * (size/2 + 2);
+      const sx = position.x + Math.cos(angle) * (baseSize/2 + 4);
+      const sy = position.y + Math.sin(angle) * (baseSize/2 + 4);
       ctx.beginPath();
       ctx.moveTo(sx - 3, sy + 3);
       ctx.lineTo(sx, sy - 4);
@@ -604,23 +563,444 @@ function renderEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy): void {
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.arc(position.x, position.y, size / 2 + 5, 0, Math.PI * 2);
+    ctx.arc(position.x, position.y, baseSize / 2 + 5, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
   }
 
   // Health bar - industrial style
   const healthPercent = enemy.hp / enemy.maxHp;
-  const barWidth = size + 6;
+  const barWidth = baseSize + 6;
   const barHeight = 3;
   const barX = position.x - barWidth / 2;
-  const barY = position.y - size / 2 - 8;
+  const barY = position.y - baseSize / 2 - 10;
 
   ctx.fillStyle = '#101010';
   ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
 
   ctx.fillStyle = healthPercent > 0.5 ? '#508050' : healthPercent > 0.25 ? '#a08030' : '#803030';
   ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+}
+
+// ===== HIVE ENEMY RENDERS =====
+
+function renderSwarmer(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Small bug with legs
+  ctx.fillStyle = '#6b1515';
+  ctx.beginPath();
+  ctx.ellipse(pos.x, pos.y, size/2, size/3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  ctx.strokeStyle = '#501010';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const legAngle = -Math.PI/3 + i * Math.PI/3;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.lineTo(pos.x + Math.cos(legAngle) * size * 0.6, pos.y + Math.sin(legAngle) * size * 0.4 + 3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.lineTo(pos.x + Math.cos(Math.PI - legAngle) * size * 0.6, pos.y + Math.sin(legAngle) * size * 0.4 + 3);
+    ctx.stroke();
+  }
+
+  // Eyes
+  ctx.fillStyle = '#ff4040';
+  ctx.beginPath();
+  ctx.arc(pos.x - 2, pos.y - 2, 1.5, 0, Math.PI * 2);
+  ctx.arc(pos.x + 2, pos.y - 2, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function renderSpitter(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Bulbous body
+  ctx.fillStyle = '#5a1818';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y + 2, size/2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Acid sac (glowing)
+  ctx.fillStyle = '#40a040';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/4, size/3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(100, 255, 100, 0.3)';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/4, size/2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#6b2020';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/3, size/4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#ffff40';
+  ctx.beginPath();
+  ctx.arc(pos.x - 2, pos.y - size/3, 2, 0, Math.PI * 2);
+  ctx.arc(pos.x + 2, pos.y - size/3, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function renderBrute(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Armored beetle body
+  ctx.fillStyle = '#401515';
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y - size/2);
+  ctx.lineTo(pos.x + size/2, pos.y);
+  ctx.lineTo(pos.x + size/3, pos.y + size/2);
+  ctx.lineTo(pos.x - size/3, pos.y + size/2);
+  ctx.lineTo(pos.x - size/2, pos.y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Armor plates
+  ctx.strokeStyle = '#602020';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pos.x - size/3, pos.y - size/4);
+  ctx.lineTo(pos.x + size/3, pos.y - size/4);
+  ctx.moveTo(pos.x - size/4, pos.y + size/6);
+  ctx.lineTo(pos.x + size/4, pos.y + size/6);
+  ctx.stroke();
+
+  // Horns
+  ctx.fillStyle = '#301010';
+  ctx.beginPath();
+  ctx.moveTo(pos.x - size/4, pos.y - size/2);
+  ctx.lineTo(pos.x - size/6, pos.y - size * 0.7);
+  ctx.lineTo(pos.x - size/8, pos.y - size/2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(pos.x + size/4, pos.y - size/2);
+  ctx.lineTo(pos.x + size/6, pos.y - size * 0.7);
+  ctx.lineTo(pos.x + size/8, pos.y - size/2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#ff2020';
+  ctx.beginPath();
+  ctx.arc(pos.x - 4, pos.y - size/4, 2, 0, Math.PI * 2);
+  ctx.arc(pos.x + 4, pos.y - size/4, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function renderQueen(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Large abdomen
+  ctx.fillStyle = '#501020';
+  ctx.beginPath();
+  ctx.ellipse(pos.x, pos.y + size/4, size/2, size/2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Thorax
+  ctx.fillStyle = '#601525';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/6, size/3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crown spines
+  ctx.fillStyle = '#801030';
+  for (let i = 0; i < 5; i++) {
+    const angle = -Math.PI/2 + (i - 2) * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(pos.x + Math.cos(angle) * size/4, pos.y - size/4);
+    ctx.lineTo(pos.x + Math.cos(angle) * size/2.5, pos.y - size/2 - 4);
+    ctx.lineTo(pos.x + Math.cos(angle + 0.1) * size/4, pos.y - size/4);
+    ctx.fill();
+  }
+
+  // Multiple eyes
+  ctx.fillStyle = '#ff4060';
+  for (let i = 0; i < 4; i++) {
+    const ex = pos.x - 6 + i * 4;
+    ctx.beginPath();
+    ctx.arc(ex, pos.y - size/4, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ===== MACHINE ENEMY RENDERS =====
+
+function renderDrone(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Small diamond body
+  ctx.fillStyle = '#253560';
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y - size/3);
+  ctx.lineTo(pos.x + size/3, pos.y);
+  ctx.lineTo(pos.x, pos.y + size/3);
+  ctx.lineTo(pos.x - size/3, pos.y);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#4060a0';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Propeller blades (animated)
+  const rot = Date.now() / 50;
+  ctx.strokeStyle = '#6080b0';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    const angle = rot + i * Math.PI/2;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.lineTo(pos.x + Math.cos(angle) * size/2.5, pos.y + Math.sin(angle) * size/2.5);
+    ctx.stroke();
+  }
+
+  // Center light
+  ctx.fillStyle = '#80c0ff';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function renderWalker(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Body
+  ctx.fillStyle = '#304070';
+  ctx.fillRect(pos.x - size/3, pos.y - size/3, size * 0.66, size/2);
+
+  // Head/sensor
+  ctx.fillStyle = '#405080';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/3, size/4, Math.PI, 0);
+  ctx.fill();
+
+  // Legs
+  ctx.strokeStyle = '#506090';
+  ctx.lineWidth = 3;
+  // Left leg
+  ctx.beginPath();
+  ctx.moveTo(pos.x - size/4, pos.y + size/6);
+  ctx.lineTo(pos.x - size/3, pos.y + size/2);
+  ctx.stroke();
+  // Right leg
+  ctx.beginPath();
+  ctx.moveTo(pos.x + size/4, pos.y + size/6);
+  ctx.lineTo(pos.x + size/3, pos.y + size/2);
+  ctx.stroke();
+
+  // Eye/sensor
+  ctx.fillStyle = '#ff4040';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/4, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Metal highlights
+  ctx.strokeStyle = '#7090c0';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pos.x - size/3, pos.y - size/3, size * 0.66, size/2);
+}
+
+function renderTank(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Treads
+  ctx.fillStyle = '#252535';
+  ctx.fillRect(pos.x - size/2, pos.y + size/6, size, size/4);
+
+  // Main body
+  ctx.fillStyle = '#354575';
+  ctx.fillRect(pos.x - size/2.5, pos.y - size/3, size * 0.8, size/2);
+
+  // Turret
+  ctx.fillStyle = '#405585';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/6, size/4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cannon
+  ctx.fillStyle = '#253050';
+  ctx.fillRect(pos.x - 3, pos.y - size/3, 6, -size/3);
+
+  // Armor plates
+  ctx.strokeStyle = '#5575a5';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pos.x - size/2.5, pos.y - size/3, size * 0.8, size/2);
+
+  // Lights
+  ctx.fillStyle = '#60a0ff';
+  ctx.fillRect(pos.x - size/3, pos.y - size/4, 4, 4);
+  ctx.fillRect(pos.x + size/3 - 4, pos.y - size/4, 4, 4);
+}
+
+function renderOverseer(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Floating platform body
+  ctx.fillStyle = '#253555';
+  ctx.beginPath();
+  ctx.ellipse(pos.x, pos.y, size/2, size/3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Command tower
+  ctx.fillStyle = '#354575';
+  ctx.fillRect(pos.x - size/6, pos.y - size/2, size/3, size/2);
+
+  // Antenna array
+  ctx.strokeStyle = '#5575a5';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(pos.x - size/6 + i * size/6, pos.y - size/2);
+    ctx.lineTo(pos.x - size/6 + i * size/6, pos.y - size * 0.7);
+    ctx.stroke();
+  }
+
+  // Scanner glow
+  ctx.fillStyle = 'rgba(100, 160, 255, 0.3)';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main eye
+  ctx.fillStyle = '#ff6060';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y - size/4, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ===== VOID ENEMY RENDERS =====
+
+function renderWraith(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Ghostly wisp body
+  const time = Date.now() / 200;
+
+  // Outer glow
+  ctx.fillStyle = 'rgba(100, 60, 160, 0.2)';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Core wisp shape
+  ctx.fillStyle = '#4a2070';
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y - size/2);
+  ctx.quadraticCurveTo(pos.x + size/2, pos.y, pos.x + size/4, pos.y + size/2);
+  ctx.quadraticCurveTo(pos.x, pos.y + size/3, pos.x - size/4, pos.y + size/2);
+  ctx.quadraticCurveTo(pos.x - size/2, pos.y, pos.x, pos.y - size/2);
+  ctx.fill();
+
+  // Floating particles
+  ctx.fillStyle = '#8060c0';
+  for (let i = 0; i < 3; i++) {
+    const px = pos.x + Math.sin(time + i * 2) * size/3;
+    const py = pos.y + Math.cos(time + i * 2) * size/4;
+    ctx.beginPath();
+    ctx.arc(px, py, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eyes
+  ctx.fillStyle = '#c080ff';
+  ctx.beginPath();
+  ctx.arc(pos.x - 3, pos.y - 2, 2, 0, Math.PI * 2);
+  ctx.arc(pos.x + 3, pos.y - 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function renderCorruptor(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Tentacled horror
+  const time = Date.now() / 300;
+
+  // Body
+  ctx.fillStyle = '#3a1860';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size/2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Corruption tendrils
+  ctx.strokeStyle = '#5030a0';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * Math.PI / 3) + Math.sin(time + i) * 0.2;
+    const len = size * 0.6 + Math.sin(time * 2 + i) * 4;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.quadraticCurveTo(
+      pos.x + Math.cos(angle) * len * 0.5,
+      pos.y + Math.sin(angle) * len * 0.5 + Math.sin(time + i) * 3,
+      pos.x + Math.cos(angle) * len,
+      pos.y + Math.sin(angle) * len
+    );
+    ctx.stroke();
+  }
+
+  // Corruption aura
+  ctx.fillStyle = 'rgba(80, 40, 120, 0.15)';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Central eye
+  ctx.fillStyle = '#a060e0';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size/5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#200040';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size/8, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function renderVoidLord(ctx: CanvasRenderingContext2D, pos: {x: number, y: number}, size: number): void {
+  // Massive void entity
+  const time = Date.now() / 400;
+
+  // Void rift background
+  ctx.fillStyle = 'rgba(40, 20, 80, 0.3)';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size * 0.9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main body - crystalline void
+  ctx.fillStyle = '#2a1050';
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y - size/2);
+  ctx.lineTo(pos.x + size/2, pos.y - size/4);
+  ctx.lineTo(pos.x + size/2.5, pos.y + size/3);
+  ctx.lineTo(pos.x, pos.y + size/2);
+  ctx.lineTo(pos.x - size/2.5, pos.y + size/3);
+  ctx.lineTo(pos.x - size/2, pos.y - size/4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Inner glow
+  ctx.fillStyle = '#5030a0';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size/3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Void tendrils
+  ctx.strokeStyle = '#7050c0';
+  ctx.lineWidth = 4;
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * Math.PI / 4) + time * 0.5;
+    const len = size * 0.7 + Math.sin(time * 3 + i) * 5;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.lineTo(pos.x + Math.cos(angle) * len, pos.y + Math.sin(angle) * len);
+    ctx.stroke();
+  }
+
+  // Multiple eyes
+  ctx.fillStyle = '#e080ff';
+  const eyePositions = [
+    {x: 0, y: -size/4},
+    {x: -size/5, y: 0},
+    {x: size/5, y: 0},
+    {x: 0, y: size/5}
+  ];
+  for (const ep of eyePositions) {
+    ctx.beginPath();
+    ctx.arc(pos.x + ep.x, pos.y + ep.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Central void core
+  ctx.fillStyle = '#100020';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, size/6, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 // ============================================================================
