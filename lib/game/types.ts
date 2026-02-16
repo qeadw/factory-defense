@@ -583,7 +583,7 @@ export const BUILDING_DEFINITIONS: Record<BuildingType, {
     width: 2,
     height: 2,
     maxHp: 200,
-    cost: [{ type: 'steel', amount: 15 }, { type: 'circuits', amount: 5 }],
+    cost: [{ type: 'iron_ingot', amount: 20 }, { type: 'copper_wire', amount: 10 }],
     powerRequired: true,
     category: 'defense',
   },

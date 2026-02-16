@@ -76,7 +76,7 @@ export function createInitialState(): GameState {
       upgrades: {},
     },
 
-    unlockedBuildings: new Set(['ore_extractor', 'smelter', 'conveyor', 'storage', 'wall', 'coal_generator']),
+    unlockedBuildings: new Set(['ore_extractor', 'smelter', 'conveyor', 'storage', 'wall', 'coal_generator', 'turret_base']),
     unlockedWeapons: new Set(['basic_rifle']),
     unlockedAbilities: new Set(['dash']),
 
@@ -137,14 +137,55 @@ function generateMap(width: number, height: number): Tile[][] {
   const oreMinDist = 8; // Not too close to core
   const oreMaxDist = safeZoneRadius - 2; // Within powered area with margin
   const oreTypes: TileType[] = ['iron_deposit', 'copper_deposit', 'coal_deposit', 'stone_deposit'];
-  const veinCounts = [12, 8, 6, 5]; // More iron, less stone
+  const veinCounts = [36, 24, 18, 15]; // 3x vein counts
 
+  // Helper function to place a vein
+  const placeVein = (oreType: TileType, targetX: number, targetY: number, minSize: number, maxSize: number) => {
+    const veinSize = minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
+    const veinTiles: { x: number; y: number }[] = [{ x: targetX, y: targetY }];
+
+    for (let i = 1; i < veinSize; i++) {
+      const parent = veinTiles[Math.floor(Math.random() * veinTiles.length)];
+      const dirs = [
+        { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
+        { dx: 1, dy: 1 }, { dx: -1, dy: 1 },
+        { dx: 1, dy: -1 }, { dx: -1, dy: -1 },
+      ];
+      const dir = dirs[Math.floor(Math.random() * dirs.length)];
+      const newX = parent.x + dir.dx;
+      const newY = parent.y + dir.dy;
+
+      if (newX >= 0 && newX < width && newY >= 0 && newY < height &&
+          !veinTiles.some(t => t.x === newX && t.y === newY)) {
+        veinTiles.push({ x: newX, y: newY });
+      }
+    }
+
+    for (const tile of veinTiles) {
+      if (tiles[tile.y]?.[tile.x]?.type === 'grass') {
+        tiles[tile.y][tile.x].type = oreType;
+        tiles[tile.y][tile.x].resourceYield = 1;
+      }
+    }
+  };
+
+  // Guarantee 1 vein of each type near the core (at distance 8-12)
+  const nearCoreAngles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5]; // 4 cardinal directions
+  for (let i = 0; i < oreTypes.length; i++) {
+    const angle = nearCoreAngles[i] + (Math.random() - 0.5) * 0.5; // Slight randomness
+    const radius = 8 + Math.random() * 4; // 8-12 tiles from center
+    const veinX = Math.floor(centerX + Math.cos(angle) * radius);
+    const veinY = Math.floor(centerY + Math.sin(angle) * radius);
+    placeVein(oreTypes[i], veinX, veinY, 4, 6); // Guaranteed veins are 4-6 tiles
+  }
+
+  // Generate random veins
   for (let oreIndex = 0; oreIndex < oreTypes.length; oreIndex++) {
     const oreType = oreTypes[oreIndex];
     const numVeins = veinCounts[oreIndex];
 
     for (let v = 0; v < numVeins; v++) {
-      // Find a valid vein center
       let veinX: number, veinY: number, dist: number;
       let attempts = 0;
       do {
@@ -158,39 +199,7 @@ function generateMap(width: number, height: number): Tile[][] {
 
       if (attempts >= 50) continue;
 
-      // Create vein cluster (3-8 tiles)
-      const veinSize = 3 + Math.floor(Math.random() * 6);
-      const veinTiles: { x: number; y: number }[] = [{ x: veinX, y: veinY }];
-
-      for (let i = 1; i < veinSize; i++) {
-        // Grow from existing vein tile
-        const parent = veinTiles[Math.floor(Math.random() * veinTiles.length)];
-        const dirs = [
-          { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
-          { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
-          { dx: 1, dy: 1 }, { dx: -1, dy: 1 },
-          { dx: 1, dy: -1 }, { dx: -1, dy: -1 },
-        ];
-        const dir = dirs[Math.floor(Math.random() * dirs.length)];
-        const newX = parent.x + dir.dx;
-        const newY = parent.y + dir.dy;
-
-        // Check if valid
-        const newDist = Math.sqrt((newX - centerX) ** 2 + (newY - centerY) ** 2);
-        if (newX >= 0 && newX < width && newY >= 0 && newY < height &&
-            newDist >= oreMinDist && newDist <= oreMaxDist &&
-            !veinTiles.some(t => t.x === newX && t.y === newY)) {
-          veinTiles.push({ x: newX, y: newY });
-        }
-      }
-
-      // Place the vein tiles
-      for (const tile of veinTiles) {
-        if (tiles[tile.y][tile.x].type === 'grass') {
-          tiles[tile.y][tile.x].type = oreType;
-          tiles[tile.y][tile.x].resourceYield = 1;
-        }
-      }
+      placeVein(oreType, veinX, veinY, 3, 8);
     }
   }
 
