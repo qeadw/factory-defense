@@ -46,7 +46,7 @@ export function createInitialState(): GameState {
       coal: 80,
       stone: 200,
       water: 0,
-      iron_ingot: 40,
+      iron_ingot: 60,
       copper_ingot: 20,
       copper_wire: 10,
       silicon: 0,
