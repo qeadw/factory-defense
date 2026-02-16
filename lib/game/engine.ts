@@ -203,6 +203,29 @@ function generateMap(width: number, height: number): Tile[][] {
     }
   }
 
+  // Additional scattered random ore deposits (old style)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+      if (distFromCenter >= oreMinDist && distFromCenter <= oreMaxDist && tiles[y][x].type === 'grass') {
+        const rand = Math.random();
+        if (rand < 0.02) {
+          tiles[y][x].type = 'iron_deposit';
+          tiles[y][x].resourceYield = 1;
+        } else if (rand < 0.035) {
+          tiles[y][x].type = 'copper_deposit';
+          tiles[y][x].resourceYield = 1;
+        } else if (rand < 0.045) {
+          tiles[y][x].type = 'coal_deposit';
+          tiles[y][x].resourceYield = 1;
+        } else if (rand < 0.055) {
+          tiles[y][x].type = 'stone_deposit';
+          tiles[y][x].resourceYield = 1;
+        }
+      }
+    }
+  }
+
   // Water patches outside safe zone
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
