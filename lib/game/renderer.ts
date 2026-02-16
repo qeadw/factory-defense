@@ -114,8 +114,64 @@ export function render(
 // TILES
 // ============================================================================
 
-// Check if a tile position is within any power radius
+// Cache for powered tiles - computed once per frame
+let poweredTilesCache: Set<string> | null = null;
+let poweredTilesCacheFrame = -1;
+
+function computePoweredTiles(state: GameState): Set<string> {
+  const powered = new Set<string>();
+
+  for (const building of state.buildings.values()) {
+    if (building.type === 'coal_generator' || building.type === 'steam_generator' || building.type === 'fusion_reactor' || building.type === 'core') {
+      let radius: number;
+      if (building.type === 'core') {
+        radius = 36;
+      } else if (building.type === 'coal_generator') {
+        const gen = building as any;
+        if (gen.fuelStored <= 0) continue;
+        radius = 5;
+      } else if (building.type === 'steam_generator') {
+        radius = 8;
+      } else {
+        radius = 15;
+      }
+
+      const centerX = building.gridX + building.width / 2;
+      const centerY = building.gridY + building.height / 2;
+      const radiusSq = radius * radius;
+
+      // Only check tiles within bounding box
+      const minX = Math.max(0, Math.floor(centerX - radius));
+      const maxX = Math.min(state.mapWidth - 1, Math.ceil(centerX + radius));
+      const minY = Math.max(0, Math.floor(centerY - radius));
+      const maxY = Math.min(state.mapHeight - 1, Math.ceil(centerY + radius));
+
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const dx = x + 0.5 - centerX;
+          const dy = y + 0.5 - centerY;
+          if (dx * dx + dy * dy <= radiusSq) {
+            powered.add(`${x},${y}`);
+          }
+        }
+      }
+    }
+  }
+
+  return powered;
+}
+
 function isTilePowered(state: GameState, tileX: number, tileY: number): boolean {
+  // Use cached powered tiles
+  if (poweredTilesCacheFrame !== state.tick) {
+    poweredTilesCache = computePoweredTiles(state);
+    poweredTilesCacheFrame = state.tick;
+  }
+  return poweredTilesCache!.has(`${tileX},${tileY}`);
+}
+
+// Legacy function kept for compatibility but using new cache
+function isTilePoweredLegacy(state: GameState, tileX: number, tileY: number): boolean {
   const tileCenterX = (tileX + 0.5) * TILE_SIZE;
   const tileCenterY = (tileY + 0.5) * TILE_SIZE;
 
@@ -158,6 +214,16 @@ function renderTiles(
   const startY = Math.max(0, Math.floor(viewTop / TILE_SIZE));
   const endY = Math.min(state.mapHeight, Math.ceil(viewBottom / TILE_SIZE));
 
+  const zoom = state.camera.zoom;
+  const showDetail = zoom >= 0.7; // Skip details when zoomed out
+  const showFullDetail = zoom >= 1.0; // Full detail only when zoomed in
+
+  // Pre-compute powered tiles cache for this frame
+  if (poweredTilesCacheFrame !== state.tick) {
+    poweredTilesCache = computePoweredTiles(state);
+    poweredTilesCacheFrame = state.tick;
+  }
+
   for (let y = startY; y < endY; y++) {
     for (let x = startX; x < endX; x++) {
       const tile = state.tiles[y]?.[x];
@@ -165,78 +231,95 @@ function renderTiles(
 
       const worldX = x * TILE_SIZE;
       const worldY = y * TILE_SIZE;
-      const isPowered = isTilePowered(state, x, y);
+      const isPowered = poweredTilesCache!.has(`${x},${y}`);
 
       // Base tile color - different for powered vs unpowered
       if (isPowered) {
-        // Inside base - lighter, more industrial floor look
         ctx.fillStyle = tile.buildable ? '#3a3a40' : getTileColor(tile.type);
       } else {
-        // Outside base - darker, wilderness look
         ctx.fillStyle = getTileColor(tile.type);
       }
       ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-      // Industrial texture noise
+      // Skip details when zoomed out for performance
+      if (!showDetail) {
+        // Just draw deposit markers as simple squares when zoomed out
+        if (tile.type.includes('deposit')) {
+          const depositColor = tile.type === 'iron_deposit' ? '#7a6040' :
+                              tile.type === 'copper_deposit' ? '#8b5535' :
+                              tile.type === 'coal_deposit' ? '#252525' : '#555555';
+          ctx.fillStyle = depositColor;
+          ctx.fillRect(worldX + 4, worldY + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        }
+        continue;
+      }
+
+      // Medium detail - noise and basic overlays
       const noise = ((x * 7 + y * 13) % 17) / 17;
       ctx.fillStyle = `rgba(0, 0, 0, ${0.05 + noise * 0.08})`;
       ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-      // Powered area overlay - subtle warm tint
       if (isPowered && tile.buildable) {
         ctx.fillStyle = 'rgba(80, 60, 40, 0.08)';
         ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
 
-        // Metal floor plate pattern
-        ctx.strokeStyle = 'rgba(80, 80, 90, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(worldX + 4, worldY + TILE_SIZE / 2);
-        ctx.lineTo(worldX + TILE_SIZE - 4, worldY + TILE_SIZE / 2);
-        ctx.stroke();
+        // Only draw floor details at full zoom
+        if (showFullDetail) {
+          ctx.strokeStyle = 'rgba(80, 80, 90, 0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(worldX + 4, worldY + TILE_SIZE / 2);
+          ctx.lineTo(worldX + TILE_SIZE - 4, worldY + TILE_SIZE / 2);
+          ctx.stroke();
 
-        // Corner rivets - more visible in powered area
-        ctx.fillStyle = 'rgba(90, 90, 100, 0.5)';
-        const rivetSize = 2;
-        ctx.fillRect(worldX + 2, worldY + 2, rivetSize, rivetSize);
-        ctx.fillRect(worldX + TILE_SIZE - 4, worldY + 2, rivetSize, rivetSize);
-        ctx.fillRect(worldX + 2, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
-        ctx.fillRect(worldX + TILE_SIZE - 4, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
+          ctx.fillStyle = 'rgba(90, 90, 100, 0.5)';
+          const rivetSize = 2;
+          ctx.fillRect(worldX + 2, worldY + 2, rivetSize, rivetSize);
+          ctx.fillRect(worldX + TILE_SIZE - 4, worldY + 2, rivetSize, rivetSize);
+          ctx.fillRect(worldX + 2, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
+          ctx.fillRect(worldX + TILE_SIZE - 4, worldY + TILE_SIZE - 4, rivetSize, rivetSize);
+        }
       } else if (tile.buildable) {
-        // Unpowered buildable - darker wilderness
         ctx.fillStyle = 'rgba(0, 10, 5, 0.15)';
         ctx.fillRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
       }
 
-      // Grid lines - industrial seams
-      ctx.strokeStyle = isPowered ? 'rgba(50, 50, 55, 0.9)' : 'rgba(20, 20, 25, 0.8)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
+      // Grid lines only at medium+ zoom
+      if (showDetail) {
+        ctx.strokeStyle = isPowered ? 'rgba(50, 50, 55, 0.9)' : 'rgba(20, 20, 25, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(worldX, worldY, TILE_SIZE, TILE_SIZE);
+      }
 
-      // Resource deposit indicator - ore chunks
+      // Resource deposits
       if (tile.type.includes('deposit')) {
         const depositColor = tile.type === 'iron_deposit' ? '#7a6040' :
                             tile.type === 'copper_deposit' ? '#8b5535' :
                             tile.type === 'coal_deposit' ? '#252525' : '#555555';
 
-        // Multiple ore chunks
-        for (let i = 0; i < 3; i++) {
-          const ox = worldX + 8 + ((i * 11 + x) % 16);
-          const oy = worldY + 8 + ((i * 7 + y) % 16);
-          const size = 4 + (i % 2) * 2;
+        if (showFullDetail) {
+          // Full detail ore chunks
+          for (let i = 0; i < 3; i++) {
+            const ox = worldX + 8 + ((i * 11 + x) % 16);
+            const oy = worldY + 8 + ((i * 7 + y) % 16);
+            const size = 4 + (i % 2) * 2;
 
+            ctx.fillStyle = depositColor;
+            ctx.beginPath();
+            ctx.moveTo(ox, oy - size/2);
+            ctx.lineTo(ox + size/2, oy);
+            ctx.lineTo(ox, oy + size/2);
+            ctx.lineTo(ox - size/2, oy);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.fillRect(ox - size/4, oy - size/2, size/2, size/4);
+          }
+        } else {
+          // Simplified ore marker
           ctx.fillStyle = depositColor;
-          ctx.beginPath();
-          ctx.moveTo(ox, oy - size/2);
-          ctx.lineTo(ox + size/2, oy);
-          ctx.lineTo(ox, oy + size/2);
-          ctx.lineTo(ox - size/2, oy);
-          ctx.closePath();
-          ctx.fill();
-
-          // Highlight
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-          ctx.fillRect(ox - size/4, oy - size/2, size/2, size/4);
+          ctx.fillRect(worldX + 6, worldY + 6, TILE_SIZE - 12, TILE_SIZE - 12);
         }
       }
     }
