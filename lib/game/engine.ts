@@ -692,24 +692,31 @@ function updateExtractor(state: GameState, building: Building, dt: number): void
 }
 
 function findAdjacentConveyor(state: GameState, building: Building): Building | null {
-  // Check all edges of the building for conveyors
+  // Only check the edge in the building's output direction
   const checkPositions: { x: number; y: number }[] = [];
+  const dir = building.direction || 'right';
 
-  // Right edge
-  for (let y = 0; y < building.height; y++) {
-    checkPositions.push({ x: building.gridX + building.width, y: building.gridY + y });
-  }
-  // Left edge
-  for (let y = 0; y < building.height; y++) {
-    checkPositions.push({ x: building.gridX - 1, y: building.gridY + y });
-  }
-  // Bottom edge
-  for (let x = 0; x < building.width; x++) {
-    checkPositions.push({ x: building.gridX + x, y: building.gridY + building.height });
-  }
-  // Top edge
-  for (let x = 0; x < building.width; x++) {
-    checkPositions.push({ x: building.gridX + x, y: building.gridY - 1 });
+  switch (dir) {
+    case 'right':
+      for (let y = 0; y < building.height; y++) {
+        checkPositions.push({ x: building.gridX + building.width, y: building.gridY + y });
+      }
+      break;
+    case 'left':
+      for (let y = 0; y < building.height; y++) {
+        checkPositions.push({ x: building.gridX - 1, y: building.gridY + y });
+      }
+      break;
+    case 'down':
+      for (let x = 0; x < building.width; x++) {
+        checkPositions.push({ x: building.gridX + x, y: building.gridY + building.height });
+      }
+      break;
+    case 'up':
+      for (let x = 0; x < building.width; x++) {
+        checkPositions.push({ x: building.gridX + x, y: building.gridY - 1 });
+      }
+      break;
   }
 
   for (const pos of checkPositions) {
