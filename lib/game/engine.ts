@@ -525,9 +525,20 @@ function updatePowerStatus(state: GameState): void {
 }
 
 function updateExtractor(state: GameState, building: Building, dt: number): void {
-  // Check if on a deposit
-  const tile = state.tiles[building.gridY]?.[building.gridX];
-  if (!tile || !tile.type.includes('deposit')) return;
+  // Check all tiles the extractor occupies for a deposit
+  let depositTile: typeof state.tiles[0][0] | null = null;
+  for (let dy = 0; dy < building.height; dy++) {
+    for (let dx = 0; dx < building.width; dx++) {
+      const tile = state.tiles[building.gridY + dy]?.[building.gridX + dx];
+      if (tile && tile.type.includes('deposit')) {
+        depositTile = tile;
+        break;
+      }
+    }
+    if (depositTile) break;
+  }
+
+  if (!depositTile) return;
 
   // Extract resources
   building.craftProgress += dt;
@@ -535,7 +546,7 @@ function updateExtractor(state: GameState, building: Building, dt: number): void
     building.craftProgress = 0;
 
     let resourceType: ResourceType;
-    switch (tile.type) {
+    switch (depositTile.type) {
       case 'iron_deposit': resourceType = 'iron_ore'; break;
       case 'copper_deposit': resourceType = 'copper_ore'; break;
       case 'coal_deposit': resourceType = 'coal'; break;
@@ -565,13 +576,25 @@ function updateExtractor(state: GameState, building: Building, dt: number): void
 }
 
 function findAdjacentConveyor(state: GameState, building: Building): Building | null {
-  // Check all 4 directions for a conveyor
-  const checkPositions = [
-    { x: building.gridX + building.width, y: building.gridY }, // right
-    { x: building.gridX - 1, y: building.gridY }, // left
-    { x: building.gridX, y: building.gridY + building.height }, // down
-    { x: building.gridX, y: building.gridY - 1 }, // up
-  ];
+  // Check all edges of the building for conveyors
+  const checkPositions: { x: number; y: number }[] = [];
+
+  // Right edge
+  for (let y = 0; y < building.height; y++) {
+    checkPositions.push({ x: building.gridX + building.width, y: building.gridY + y });
+  }
+  // Left edge
+  for (let y = 0; y < building.height; y++) {
+    checkPositions.push({ x: building.gridX - 1, y: building.gridY + y });
+  }
+  // Bottom edge
+  for (let x = 0; x < building.width; x++) {
+    checkPositions.push({ x: building.gridX + x, y: building.gridY + building.height });
+  }
+  // Top edge
+  for (let x = 0; x < building.width; x++) {
+    checkPositions.push({ x: building.gridX + x, y: building.gridY - 1 });
+  }
 
   for (const pos of checkPositions) {
     for (const other of state.buildings.values()) {

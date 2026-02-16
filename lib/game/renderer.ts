@@ -1434,6 +1434,9 @@ function renderUI(
   // Resources
   renderResources(ctx, state);
 
+  // Power stats (top right)
+  renderPowerStats(ctx, state, canvasWidth);
+
   // Wave info
   renderWaveInfo(ctx, state, canvasWidth);
 
@@ -1647,6 +1650,83 @@ function renderResources(ctx: CanvasRenderingContext2D, state: GameState): void 
       y += 16;
     }
   }
+}
+
+function renderPowerStats(ctx: CanvasRenderingContext2D, state: GameState, canvasWidth: number): void {
+  // Calculate power generation and consumption
+  let powerGeneration = 0;
+  let powerConsumption = 0;
+
+  for (const building of state.buildings.values()) {
+    // Power generation
+    if (building.type === 'core') {
+      powerGeneration += 100; // Core provides 100 power
+    } else if (building.type === 'coal_generator') {
+      const gen = building as any;
+      if (gen.fuelStored > 0) {
+        powerGeneration += 20; // Each coal generator provides 20 power
+      }
+    } else if (building.type === 'steam_generator') {
+      powerGeneration += 50;
+    } else if (building.type === 'fusion_reactor') {
+      powerGeneration += 200;
+    }
+
+    // Power consumption
+    if (building.powered && BUILDING_DEFINITIONS[building.type].powerRequired) {
+      switch (building.type) {
+        case 'ore_extractor': powerConsumption += 5; break;
+        case 'smelter': powerConsumption += 10; break;
+        case 'assembler': powerConsumption += 15; break;
+        case 'turret_base': powerConsumption += 8; break;
+        case 'wall_turret': powerConsumption += 5; break;
+        case 'pump': powerConsumption += 5; break;
+        case 'ammo_factory': powerConsumption += 12; break;
+        case 'refinery': powerConsumption += 20; break;
+        case 'drone_hub': powerConsumption += 15; break;
+        default: powerConsumption += 5; break;
+      }
+    }
+  }
+
+  const panelX = canvasWidth - 210;
+  const panelY = 90; // Below wave info
+
+  // Panel background
+  ctx.fillStyle = 'rgba(15, 15, 20, 0.92)';
+  ctx.fillRect(panelX, panelY, 200, 55);
+  ctx.strokeStyle = '#404050';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(panelX, panelY, 200, 55);
+
+  // Header
+  const powerBalance = powerGeneration - powerConsumption;
+  ctx.fillStyle = powerBalance >= 0 ? '#406050' : '#804040';
+  ctx.fillRect(panelX, panelY, 200, 18);
+  ctx.fillStyle = '#b0b0a0';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('POWER GRID', panelX + 100, panelY + 13);
+
+  // Power generation
+  ctx.fillStyle = '#50a060';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('GENERATION', panelX + 10, panelY + 32);
+  ctx.fillStyle = '#80c080';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`+${powerGeneration}`, panelX + 190, panelY + 32);
+
+  // Power consumption
+  ctx.fillStyle = '#a06050';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('CONSUMPTION', panelX + 10, panelY + 46);
+  ctx.fillStyle = '#c08080';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`-${powerConsumption}`, panelX + 190, panelY + 46);
 }
 
 function renderWaveInfo(ctx: CanvasRenderingContext2D, state: GameState, canvasWidth: number): void {
