@@ -76,7 +76,7 @@ export function createInitialState(): GameState {
       upgrades: {},
     },
 
-    unlockedBuildings: new Set(['ore_extractor', 'smelter', 'conveyor', 'storage', 'wall', 'coal_generator', 'turret_base']),
+    unlockedBuildings: new Set(['ore_extractor', 'smelter', 'conveyor', 'conveyor_junction', 'conveyor_router', 'storage', 'wall', 'coal_generator', 'turret_base']),
     unlockedWeapons: new Set(['basic_rifle']),
     unlockedAbilities: new Set(['dash']),
 
@@ -560,37 +560,50 @@ function updatePowerStatus(state: GameState): void {
     building.powered = false;
   }
 
-  // Find all generators and power nearby buildings
+  // Calculate total power generation (global grid)
+  let totalPower = 0;
   for (const building of state.buildings.values()) {
-    if (building.type === 'coal_generator' || building.type === 'steam_generator' || building.type === 'fusion_reactor') {
-      const generator = building as any;
-      const radius = building.type === 'coal_generator' ? 5 : building.type === 'steam_generator' ? 8 : 15;
-      const centerX = building.gridX + building.width / 2;
-      const centerY = building.gridY + building.height / 2;
-
-      // Check if generator has fuel
-      if (generator.fuelStored <= 0 && building.type !== 'fusion_reactor') {
-        continue;
+    if (building.type === 'core') {
+      totalPower += 100;
+    } else if (building.type === 'coal_generator') {
+      const gen = building as any;
+      if (gen.fuelStored > 0) {
+        totalPower += 20;
       }
+    } else if (building.type === 'steam_generator') {
+      totalPower += 50;
+    } else if (building.type === 'fusion_reactor') {
+      totalPower += 200;
+    }
+  }
 
-      for (const other of state.buildings.values()) {
-        const otherCenterX = other.gridX + other.width / 2;
-        const otherCenterY = other.gridY + other.height / 2;
-        const dist = Math.sqrt((centerX - otherCenterX) ** 2 + (centerY - otherCenterY) ** 2);
-
-        if (dist <= radius) {
-          other.powered = true;
-        }
+  // Calculate total power consumption
+  let totalConsumption = 0;
+  for (const building of state.buildings.values()) {
+    if (BUILDING_DEFINITIONS[building.type].powerRequired) {
+      switch (building.type) {
+        case 'ore_extractor': totalConsumption += 5; break;
+        case 'smelter': totalConsumption += 10; break;
+        case 'assembler': totalConsumption += 15; break;
+        case 'turret_base': totalConsumption += 8; break;
+        case 'wall_turret': totalConsumption += 5; break;
+        case 'pump': totalConsumption += 5; break;
+        case 'ammo_factory': totalConsumption += 12; break;
+        case 'refinery': totalConsumption += 20; break;
+        case 'drone_hub': totalConsumption += 15; break;
+        default: totalConsumption += 5; break;
       }
     }
   }
 
-  // Core is always powered AND provides power to nearby buildings
+  // If we have enough power, power all buildings in core's area
+  const hasPower = totalPower >= totalConsumption;
+
+  // Find core and power buildings within its radius
   for (const building of state.buildings.values()) {
     if (building.type === 'core') {
       building.powered = true;
 
-      // Core powers buildings within radius 36
       const coreRadius = 36;
       const centerX = building.gridX + building.width / 2;
       const centerY = building.gridY + building.height / 2;
@@ -600,10 +613,17 @@ function updatePowerStatus(state: GameState): void {
         const otherCenterY = other.gridY + other.height / 2;
         const dist = Math.sqrt((centerX - otherCenterX) ** 2 + (centerY - otherCenterY) ** 2);
 
-        if (dist <= coreRadius) {
+        if (dist <= coreRadius && hasPower) {
           other.powered = true;
         }
       }
+    }
+  }
+
+  // Generators are always powered (they generate, not consume)
+  for (const building of state.buildings.values()) {
+    if (building.type === 'coal_generator' || building.type === 'steam_generator' || building.type === 'fusion_reactor') {
+      building.powered = true;
     }
   }
 }
@@ -794,21 +814,60 @@ function transferConveyorItems(state: GameState): void {
 }
 
 function updateProduction(state: GameState, building: Building, dt: number): void {
-  // TODO: Implement production logic with recipes
+  // Smelter recipes
+  const smelterRecipes: { input: ResourceType; inputAmount: number; output: ResourceType; outputAmount: number; time: number }[] = [
+    { input: 'iron_ore', inputAmount: 2, output: 'iron_ingot', outputAmount: 1, time: 3 },
+    { input: 'copper_ore', inputAmount: 2, output: 'copper_ingot', outputAmount: 1, time: 3 },
+  ];
+
+  if (building.type === 'smelter') {
+    // Check if we have input to process
+    for (const recipe of smelterRecipes) {
+      const inputStack = building.inputStorage.find(s => s.type === recipe.input);
+      if (inputStack && inputStack.amount >= recipe.inputAmount) {
+        // Process this recipe
+        building.craftProgress += dt;
+
+        if (building.craftProgress >= recipe.time) {
+          building.craftProgress = 0;
+
+          // Consume input
+          inputStack.amount -= recipe.inputAmount;
+          if (inputStack.amount <= 0) {
+            building.inputStorage = building.inputStorage.filter(s => s !== inputStack);
+          }
+
+          // Output to adjacent conveyor or storage
+          const adjacentConveyor = findAdjacentConveyor(state, building);
+          if (adjacentConveyor) {
+            const conveyorBldg = adjacentConveyor as any;
+            if (!conveyorBldg.items) conveyorBldg.items = [];
+            if (conveyorBldg.items.length < 3) {
+              conveyorBldg.items.push({ resource: recipe.output, progress: 0 });
+            }
+          } else {
+            // Add to global resources
+            state.resources[recipe.output] = (state.resources[recipe.output] || 0) + recipe.outputAmount;
+          }
+        }
+        break; // Only process one recipe at a time
+      }
+    }
+  }
 }
 
 function updateGenerator(state: GameState, building: Building, dt: number): void {
   const generator = building as any;
 
-  // Consume fuel
+  // Consume fuel - 1 coal = 5 seconds of power
   if (generator.fuelStored > 0) {
-    generator.fuelStored -= dt * 0.1; // Consume 0.1 fuel per second
+    generator.fuelStored -= dt; // Consume 1 fuel per second (5 seconds per coal)
   }
 
-  // Try to grab fuel from storage
-  if (generator.fuelStored < 10 && state.resources.coal > 0) {
+  // Try to grab coal when fuel is low
+  if (generator.fuelStored <= 0 && state.resources.coal > 0) {
     state.resources.coal--;
-    generator.fuelStored += 5;
+    generator.fuelStored = 5; // 5 seconds of power per coal
   }
 }
 
@@ -1453,4 +1512,99 @@ export function screenToWorld(
     x: (screenX - canvasWidth / 2) / camera.zoom + camera.x,
     y: (screenY - canvasHeight / 2) / camera.zoom + camera.y,
   };
+}
+
+// ============================================================================
+// SAVE/LOAD
+// ============================================================================
+
+const SAVE_KEY = 'factory_defense_save';
+
+export function saveGame(state: GameState): void {
+  const saveData = {
+    resources: state.resources,
+    buildings: Array.from(state.buildings.values()).map(b => ({
+      id: b.id,
+      type: b.type,
+      gridX: b.gridX,
+      gridY: b.gridY,
+      width: b.width,
+      height: b.height,
+      hp: b.hp,
+      maxHp: b.maxHp,
+      powered: b.powered,
+      direction: b.direction,
+      inputStorage: b.inputStorage,
+      outputStorage: b.outputStorage,
+      craftProgress: b.craftProgress,
+      level: b.level,
+      fuelStored: (b as any).fuelStored,
+      items: (b as any).items,
+    })),
+    wavesCompleted: state.wavesCompleted,
+    prestige: state.prestige,
+    unlockedBuildings: Array.from(state.unlockedBuildings),
+    unlockedWeapons: Array.from(state.unlockedWeapons),
+    unlockedAbilities: Array.from(state.unlockedAbilities),
+    completedResearch: Array.from(state.completedResearch),
+  };
+
+  localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+}
+
+export function loadGame(state: GameState): boolean {
+  const saved = localStorage.getItem(SAVE_KEY);
+  if (!saved) return false;
+
+  try {
+    const saveData = JSON.parse(saved);
+
+    // Restore resources
+    state.resources = saveData.resources;
+
+    // Clear and restore buildings
+    state.buildings.clear();
+    for (const b of saveData.buildings) {
+      state.buildings.set(b.id, {
+        id: b.id,
+        type: b.type,
+        gridX: b.gridX,
+        gridY: b.gridY,
+        width: b.width,
+        height: b.height,
+        hp: b.hp,
+        maxHp: b.maxHp,
+        powered: b.powered,
+        direction: b.direction || 'right',
+        inputStorage: b.inputStorage || [],
+        outputStorage: b.outputStorage || [],
+        craftProgress: b.craftProgress || 0,
+        currentRecipe: null,
+        level: b.level || 1,
+        fuelStored: b.fuelStored,
+        items: b.items,
+      } as any);
+    }
+
+    // Restore progress
+    state.wavesCompleted = saveData.wavesCompleted || 0;
+    state.prestige = saveData.prestige || { points: 0, totalEarned: 0, upgrades: {} };
+    state.unlockedBuildings = new Set(saveData.unlockedBuildings);
+    state.unlockedWeapons = new Set(saveData.unlockedWeapons);
+    state.unlockedAbilities = new Set(saveData.unlockedAbilities);
+    state.completedResearch = new Set(saveData.completedResearch || []);
+
+    return true;
+  } catch (e) {
+    console.error('Failed to load save:', e);
+    return false;
+  }
+}
+
+export function deleteSave(): void {
+  localStorage.removeItem(SAVE_KEY);
+}
+
+export function hasSave(): boolean {
+  return localStorage.getItem(SAVE_KEY) !== null;
 }

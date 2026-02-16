@@ -18,6 +18,9 @@ import {
   screenToWorld,
   activateAbility,
   startWave,
+  saveGame,
+  loadGame,
+  deleteSave,
 } from '@/lib/game/engine';
 import { render } from '@/lib/game/renderer';
 
@@ -44,11 +47,34 @@ export default function Game() {
 
   const [, forceUpdate] = useState({});
 
-  // Initialize game state
+  // Initialize game state and load save
   useEffect(() => {
     gameStateRef.current = createInitialState();
+    // Try to load saved game
+    if (gameStateRef.current) {
+      loadGame(gameStateRef.current);
+    }
     forceUpdate({});
   }, []);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    const saveInterval = setInterval(() => {
+      if (gameStateRef.current) {
+        saveGame(gameStateRef.current);
+      }
+    }, 30000);
+    return () => clearInterval(saveInterval);
+  }, []);
+
+  // Reset save handler
+  const handleResetSave = () => {
+    if (confirm('Are you sure you want to reset your save? This cannot be undone.')) {
+      deleteSave();
+      gameStateRef.current = createInitialState();
+      forceUpdate({});
+    }
+  };
 
   // Input handling
   useEffect(() => {
@@ -355,6 +381,25 @@ export default function Game() {
           </div>
         </div>
       )}
+
+      {/* Reset save button */}
+      <button
+        onClick={handleResetSave}
+        style={{
+          position: 'fixed',
+          bottom: 10,
+          right: 10,
+          padding: '8px 16px',
+          background: '#802020',
+          border: '1px solid #a03030',
+          color: 'white',
+          fontFamily: 'monospace',
+          fontSize: 10,
+          cursor: 'pointer',
+        }}
+      >
+        RESET SAVE
+      </button>
 
       {/* Pause overlay */}
       {state?.paused && (

@@ -331,29 +331,11 @@ function getTileColor(type: TileType): string {
 }
 
 // ============================================================================
-// POWER RADII
+// POWER RADII (only core now - generators add to global grid)
 // ============================================================================
 
 function renderPowerRadii(ctx: CanvasRenderingContext2D, state: GameState): void {
-  for (const building of state.buildings.values()) {
-    if (building.type === 'coal_generator' || building.type === 'steam_generator' || building.type === 'fusion_reactor') {
-      const generator = building as any;
-      if (generator.fuelStored <= 0 && building.type !== 'fusion_reactor') continue;
-
-      const centerX = (building.gridX + building.width / 2) * TILE_SIZE;
-      const centerY = (building.gridY + building.height / 2) * TILE_SIZE;
-      const radius = (building.type === 'coal_generator' ? 5 : building.type === 'steam_generator' ? 8 : 15) * TILE_SIZE;
-
-      ctx.fillStyle = COLORS.powerRadius;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = 'rgba(255, 200, 0, 0.3)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  }
+  // Only render core's power area - generators just add to the grid
 }
 
 // ============================================================================
