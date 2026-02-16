@@ -493,27 +493,28 @@ function renderConveyorItems(ctx: CanvasRenderingContext2D, state: GameState): v
     const dir = building.direction || 'right';
 
     for (const item of conveyor.items) {
-      // Calculate item position based on progress and direction
-      let itemX = baseX + TILE_SIZE / 2;
-      let itemY = baseY + TILE_SIZE / 2;
+      // Calculate item position - smooth center-to-center movement
+      // Progress 0 = center of current tile, Progress 1 = center of next tile
       const progress = Math.min(item.progress, 1);
+      const centerX = baseX + TILE_SIZE / 2;
+      const centerY = baseY + TILE_SIZE / 2;
 
+      let itemX = centerX;
+      let itemY = centerY;
+
+      // Move from center toward the exit direction
       switch (dir) {
         case 'right':
-          itemX = baseX + progress * TILE_SIZE;
-          itemY = baseY + TILE_SIZE / 2;
+          itemX = centerX + progress * TILE_SIZE;
           break;
         case 'left':
-          itemX = baseX + TILE_SIZE - progress * TILE_SIZE;
-          itemY = baseY + TILE_SIZE / 2;
+          itemX = centerX - progress * TILE_SIZE;
           break;
         case 'down':
-          itemX = baseX + TILE_SIZE / 2;
-          itemY = baseY + progress * TILE_SIZE;
+          itemY = centerY + progress * TILE_SIZE;
           break;
         case 'up':
-          itemX = baseX + TILE_SIZE / 2;
-          itemY = baseY + TILE_SIZE - progress * TILE_SIZE;
+          itemY = centerY - progress * TILE_SIZE;
           break;
       }
 

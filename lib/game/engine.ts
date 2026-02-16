@@ -120,35 +120,87 @@ function generateMap(width: number, height: number): Tile[][] {
   const centerY = Math.floor(height / 2);
   const safeZoneRadius = 36; // 4x larger safe zone
 
+  // Initialize all tiles as grass
   for (let y = 0; y < height; y++) {
     tiles[y] = [];
     for (let x = 0; x < width; x++) {
       const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-
-      let type: TileType = 'grass';
-      let buildable = distFromCenter <= 50; // Larger buildable area for expanded safe zone
-
-      // Add resource deposits - inside the safe zone (on metal floor)
-      const oreMinDist = 5; // Not too close to core
-      const oreMaxDist = safeZoneRadius; // Within powered area
-      if (distFromCenter >= oreMinDist && distFromCenter <= oreMaxDist) {
-        const rand = Math.random();
-        if (rand < 0.04) type = 'iron_deposit';
-        else if (rand < 0.07) type = 'copper_deposit';
-        else if (rand < 0.09) type = 'coal_deposit';
-        else if (rand < 0.11) type = 'stone_deposit';
-      }
-
-      // Water patches outside safe zone
-      if (Math.random() < 0.015 && distFromCenter > safeZoneRadius && distFromCenter <= 55) {
-        type = 'water';
-      }
-
       tiles[y][x] = {
-        type,
-        buildable,
-        resourceYield: type.includes('deposit') ? 1 : undefined,
+        type: 'grass',
+        buildable: distFromCenter <= 50,
+        resourceYield: undefined,
       };
+    }
+  }
+
+  // Generate resource veins
+  const oreMinDist = 8; // Not too close to core
+  const oreMaxDist = safeZoneRadius - 2; // Within powered area with margin
+  const oreTypes: TileType[] = ['iron_deposit', 'copper_deposit', 'coal_deposit', 'stone_deposit'];
+  const veinCounts = [12, 8, 6, 5]; // More iron, less stone
+
+  for (let oreIndex = 0; oreIndex < oreTypes.length; oreIndex++) {
+    const oreType = oreTypes[oreIndex];
+    const numVeins = veinCounts[oreIndex];
+
+    for (let v = 0; v < numVeins; v++) {
+      // Find a valid vein center
+      let veinX: number, veinY: number, dist: number;
+      let attempts = 0;
+      do {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = oreMinDist + Math.random() * (oreMaxDist - oreMinDist);
+        veinX = Math.floor(centerX + Math.cos(angle) * radius);
+        veinY = Math.floor(centerY + Math.sin(angle) * radius);
+        dist = Math.sqrt((veinX - centerX) ** 2 + (veinY - centerY) ** 2);
+        attempts++;
+      } while ((dist < oreMinDist || dist > oreMaxDist || veinX < 2 || veinX >= width - 2 || veinY < 2 || veinY >= height - 2) && attempts < 50);
+
+      if (attempts >= 50) continue;
+
+      // Create vein cluster (3-8 tiles)
+      const veinSize = 3 + Math.floor(Math.random() * 6);
+      const veinTiles: { x: number; y: number }[] = [{ x: veinX, y: veinY }];
+
+      for (let i = 1; i < veinSize; i++) {
+        // Grow from existing vein tile
+        const parent = veinTiles[Math.floor(Math.random() * veinTiles.length)];
+        const dirs = [
+          { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+          { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
+          { dx: 1, dy: 1 }, { dx: -1, dy: 1 },
+          { dx: 1, dy: -1 }, { dx: -1, dy: -1 },
+        ];
+        const dir = dirs[Math.floor(Math.random() * dirs.length)];
+        const newX = parent.x + dir.dx;
+        const newY = parent.y + dir.dy;
+
+        // Check if valid
+        const newDist = Math.sqrt((newX - centerX) ** 2 + (newY - centerY) ** 2);
+        if (newX >= 0 && newX < width && newY >= 0 && newY < height &&
+            newDist >= oreMinDist && newDist <= oreMaxDist &&
+            !veinTiles.some(t => t.x === newX && t.y === newY)) {
+          veinTiles.push({ x: newX, y: newY });
+        }
+      }
+
+      // Place the vein tiles
+      for (const tile of veinTiles) {
+        if (tiles[tile.y][tile.x].type === 'grass') {
+          tiles[tile.y][tile.x].type = oreType;
+          tiles[tile.y][tile.x].resourceYield = 1;
+        }
+      }
+    }
+  }
+
+  // Water patches outside safe zone
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+      if (Math.random() < 0.015 && distFromCenter > safeZoneRadius && distFromCenter <= 55) {
+        tiles[y][x].type = 'water';
+      }
     }
   }
 
@@ -525,24 +577,36 @@ function updatePowerStatus(state: GameState): void {
 }
 
 function updateExtractor(state: GameState, building: Building, dt: number): void {
-  // Check all tiles the extractor occupies for a deposit
+  // Check all tiles the extractor occupies for deposits and count matching ones
   let depositTile: typeof state.tiles[0][0] | null = null;
+  let depositCount = 0;
+  let depositType: string | null = null;
+
   for (let dy = 0; dy < building.height; dy++) {
     for (let dx = 0; dx < building.width; dx++) {
       const tile = state.tiles[building.gridY + dy]?.[building.gridX + dx];
       if (tile && tile.type.includes('deposit')) {
-        depositTile = tile;
-        break;
+        if (!depositTile) {
+          depositTile = tile;
+          depositType = tile.type;
+        }
+        // Count matching deposit types
+        if (tile.type === depositType) {
+          depositCount++;
+        }
       }
     }
-    if (depositTile) break;
   }
 
   if (!depositTile) return;
 
-  // Extract resources
+  // Extract resources - base 4 seconds, faster with more deposits
+  // 1 deposit = 4s, 2 deposits = 2s, 3 deposits = 1.33s, 4 deposits = 1s
+  const baseTime = 4; // Half speed (was 2 seconds)
+  const extractTime = baseTime / depositCount;
+
   building.craftProgress += dt;
-  if (building.craftProgress >= 2) { // 2 seconds per extraction
+  if (building.craftProgress >= extractTime) {
     building.craftProgress = 0;
 
     let resourceType: ResourceType;
@@ -613,8 +677,8 @@ function updateConveyor(state: GameState, building: Building, dt: number): void 
   const conveyor = building as any;
   if (!conveyor.items) conveyor.items = [];
 
-  // Move items along the conveyor
-  const speed = 0.5; // Items move at 0.5 progress per second
+  // Move items along the conveyor (3x speed)
+  const speed = 1.5; // Items move at 1.5 progress per second
   for (const item of conveyor.items) {
     item.progress += speed * dt;
   }
