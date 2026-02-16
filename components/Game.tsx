@@ -183,7 +183,26 @@ export default function Game() {
       state.input.mouseWorldY = worldPos.y;
 
       // Update hovered tile
-      state.hoveredTile = worldToGrid(worldPos.x, worldPos.y);
+      const newHoveredTile = worldToGrid(worldPos.x, worldPos.y);
+
+      // Drag-to-place conveyors
+      if (state.input.mouseDown && state.selectedBuilding &&
+          (state.selectedBuilding === 'conveyor' || state.selectedBuilding === 'conveyor_junction' || state.selectedBuilding === 'conveyor_router' || state.selectedBuilding === 'wall') &&
+          newHoveredTile &&
+          (!state.hoveredTile || newHoveredTile.gridX !== state.hoveredTile.gridX || newHoveredTile.gridY !== state.hoveredTile.gridY)) {
+        const success = placeBuilding(
+          state,
+          state.selectedBuilding,
+          newHoveredTile.gridX,
+          newHoveredTile.gridY,
+          state.placementDirection
+        );
+        if (success) {
+          forceUpdate({});
+        }
+      }
+
+      state.hoveredTile = newHoveredTile;
     };
 
     const handleMouseDown = (e: MouseEvent) => {
