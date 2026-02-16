@@ -128,15 +128,15 @@ function generateMap(width: number, height: number): Tile[][] {
       let type: TileType = 'grass';
       let buildable = distFromCenter <= 50; // Larger buildable area for expanded safe zone
 
-      // Add resource deposits - in outer ring, at least 2 tiles from safe zone edge
-      const oreMinDist = safeZoneRadius + 2; // 2 tiles outside safe zone
-      const oreMaxDist = safeZoneRadius + 8; // outer ring
+      // Add resource deposits - inside the safe zone (on metal floor)
+      const oreMinDist = 5; // Not too close to core
+      const oreMaxDist = safeZoneRadius; // Within powered area
       if (distFromCenter >= oreMinDist && distFromCenter <= oreMaxDist) {
         const rand = Math.random();
-        if (rand < 0.05) type = 'iron_deposit';
-        else if (rand < 0.09) type = 'copper_deposit';
-        else if (rand < 0.12) type = 'coal_deposit';
-        else if (rand < 0.14) type = 'stone_deposit';
+        if (rand < 0.04) type = 'iron_deposit';
+        else if (rand < 0.07) type = 'copper_deposit';
+        else if (rand < 0.09) type = 'coal_deposit';
+        else if (rand < 0.11) type = 'stone_deposit';
       }
 
       // Water patches outside safe zone
