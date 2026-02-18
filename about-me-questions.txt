@@ -1,0 +1,62 @@
+ABOUT ME PAGE - QUESTIONS FOR YOU TO ANSWER
+============================================
+
+Please answer these questions so I can create your About Me page:
+
+BASIC INFO
+----------
+1. What is your name (or preferred display name/alias)?
+2. What is your age or age range you'd like to share?
+3. Where are you located (city, country, or just general region)?
+4. What's your current occupation or what do you do?
+5. Do you have a profile picture or avatar you'd like to use?
+
+INTERESTS & HOBBIES
+-------------------
+6. What are your main hobbies besides game development?
+7. What types of games do you enjoy playing?
+8. What are your favorite games of all time?
+9. Do you have any other creative pursuits (art, music, writing, etc.)?
+10. What do you do for fun outside of tech/gaming?
+
+GAME DEVELOPMENT
+----------------
+11. How long have you been making games or coding?
+12. What got you interested in game development?
+13. What's your preferred game engine or tech stack?
+14. What types of games do you enjoy making the most?
+15. What's your dream game project you'd love to create someday?
+16. Do you work solo or with a team?
+
+WORK STYLE & PHILOSOPHY
+-----------------------
+17. How would you describe your development style (fast iteration, careful planning, etc.)?
+18. What inspires your game ideas?
+19. What's most important to you in a game (gameplay, story, visuals, etc.)?
+20. How do you approach learning new skills or technologies?
+
+SOCIAL & CONTACT
+----------------
+21. Do you have a Twitter/X handle you want to share?
+22. Do you have a GitHub profile to link?
+23. Discord username or server?
+24. YouTube or Twitch channel?
+25. Any other social links (portfolio, itch.io, etc.)?
+
+FUN/PERSONALITY
+---------------
+26. What's a fun fact about you?
+27. Favorite food or drink while coding?
+28. Night owl or early bird?
+29. Cats or dogs (or other pets)?
+30. Any motto or favorite quote?
+
+ADDITIONAL
+----------
+31. What would you like visitors to know about you?
+32. Any projects you're particularly proud of?
+33. Goals for the future?
+34. Anything else you'd like to include?
+
+============================================
+Reply with your answers and I'll format the About Me page!
